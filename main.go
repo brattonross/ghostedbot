@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/ed25519"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -83,32 +82,15 @@ func newDiscordInteractionHandler(opts discordInteractionHandlerOptions) http.Ha
 	}
 }
 
-type config struct {
-	Discord struct {
-		PublicKey []byte `json:"public_key"`
-	} `json:"discord"`
-}
-
 func main() {
-	configPath := flag.String("config", "./config.json", "path to config file")
-	flag.Parse()
-
-	configFile, err := os.ReadFile(*configPath)
-	if err != nil {
-		log.Fatalf("failed to load config file at \"%s\": %s\n", *configPath, err)
-	}
-
-	var cfg config
-	err = json.Unmarshal(configFile, &cfg)
-	if err != nil {
-		log.Fatalf("failed to parse config file: %s\n", err)
-	}
+	port := os.Getenv("PORT")
+	publicKey := os.Getenv("DISCORD_PUBLIC_KEY")
 
 	http.HandleFunc("/", newDiscordInteractionHandler(discordInteractionHandlerOptions{
-		requestValidator: &ed25519Validator{publicKey: cfg.Discord.PublicKey},
+		requestValidator: &ed25519Validator{publicKey: []byte(publicKey)},
 	}))
 
-	if err := http.ListenAndServe(":8090", nil); err != nil {
+	if err := http.ListenAndServe("0.0.0.0:"+port, nil); err != nil {
 		log.Fatalf("failed to start server: %s\n", err)
 	}
 }
