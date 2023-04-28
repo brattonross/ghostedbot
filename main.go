@@ -27,25 +27,28 @@ type ed25519Validator struct {
 
 func (v *ed25519Validator) validate(r *http.Request) error {
 	signature := r.Header.Get("X-Signature-Ed25519")
+	sig, err := hex.DecodeString(signature)
+	if err != nil {
+		return err
+	}
+
 	timestamp := r.Header.Get("X-Signature-Timestamp")
+	message := bytes.NewBufferString(timestamp)
 
-	body, err := io.ReadAll(r.Body)
+	var body bytes.Buffer
+	// copy the body into both the message and body buffers,
+	// the latter of which will be used to re-populate the request body.
+	_, err = io.Copy(message, io.TeeReader(r.Body, &body))
 	if err != nil {
 		return err
 	}
 
-	buf := bytes.NewBufferString(timestamp)
-	_, err = buf.Write(body)
-	if err != nil {
-		return err
-	}
+	defer r.Body.Close()
+	defer func() {
+		r.Body = io.NopCloser(&body)
+	}()
 
-	sb, err := hex.DecodeString(signature)
-	if err != nil {
-		return err
-	}
-
-	if ok := ed25519.Verify(v.publicKey, buf.Bytes(), sb); !ok {
+	if ok := ed25519.Verify(v.publicKey, message.Bytes(), sig); !ok {
 		return fmt.Errorf("invalid request signature")
 	}
 
