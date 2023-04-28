@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,17 +11,17 @@ import (
 
 type passingValidator struct{}
 
-func (v *passingValidator) validate(r *http.Request) bool {
-	return true
+func (v *passingValidator) validate(r *http.Request) (bool, error) {
+	return true, nil
 }
 
 type failingValidator struct{}
 
-func (v *failingValidator) validate(r *http.Request) bool {
-	return false
+func (v *failingValidator) validate(r *http.Request) (bool, error) {
+	return false, fmt.Errorf("failed to validate request")
 }
 
-func TestRootHandler(t *testing.T) {
+func TestDiscordInteractionHandler(t *testing.T) {
 	t.Run("Returns 401 if sent invalid headers", func(t *testing.T) {
 		b, err := json.Marshal(&interaction{Type: 1})
 		if err != nil {
@@ -30,10 +31,11 @@ func TestRootHandler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(b))
 		w := httptest.NewRecorder()
 
-		rootHandler := newRootHandler(rootHandlerOptions{
+		handler := newDiscordInteractionHandler(discordInteractionHandlerOptions{
 			requestValidator: &failingValidator{},
 		})
-		rootHandler(w, req)
+
+		handler(w, req)
 
 		if w.Code != http.StatusUnauthorized {
 			t.Errorf("expected response status code %d, got %d", http.StatusUnauthorized, w.Code)
@@ -49,10 +51,11 @@ func TestRootHandler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/", bytes.NewReader(b))
 		w := httptest.NewRecorder()
 
-		rootHandler := newRootHandler(rootHandlerOptions{
+		handler := newDiscordInteractionHandler(discordInteractionHandlerOptions{
 			requestValidator: &passingValidator{},
 		})
-		rootHandler(w, req)
+
+		handler(w, req)
 
 		if w.Code != http.StatusMethodNotAllowed {
 			t.Errorf("expected response status code %d, got %d", http.StatusMethodNotAllowed, w.Code)

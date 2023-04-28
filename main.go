@@ -17,36 +17,36 @@ type interaction struct {
 }
 
 type requestValidator interface {
-	validate(r *http.Request) bool
+	validate(r *http.Request) (bool, error)
 }
 
 type ed25519Validator struct {
 	publicKey ed25519.PublicKey
 }
 
-func (v *ed25519Validator) validate(r *http.Request) bool {
+func (v *ed25519Validator) validate(r *http.Request) (bool, error) {
 	signature := r.Header.Get("X-Signature-Ed25519")
 	timestamp := r.Header.Get("X-Signature-Timestamp")
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		return false
+		return false, err
 	}
 
 	buf := bytes.NewBufferString(timestamp)
 	_, err = buf.Write(body)
 	if err != nil {
-		return false
+		return false, err
 	}
 
-	return ed25519.Verify(v.publicKey, buf.Bytes(), []byte(signature))
+	return ed25519.Verify(v.publicKey, buf.Bytes(), []byte(signature)), nil
 }
 
-type rootHandlerOptions struct {
+type discordInteractionHandlerOptions struct {
 	requestValidator requestValidator
 }
 
-func newRootHandler(opts rootHandlerOptions) http.HandlerFunc {
+func newDiscordInteractionHandler(opts discordInteractionHandlerOptions) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -54,14 +54,20 @@ func newRootHandler(opts rootHandlerOptions) http.HandlerFunc {
 			return
 		}
 
-		if !opts.requestValidator.validate(r) {
-			w.WriteHeader(http.StatusUnauthorized)
-			fmt.Fprint(w, "invalid request signature")
+		valid, err := opts.requestValidator.validate(r)
+		if err != nil {
+			log.Printf("failed to validate request: %s\n", err)
+			http.Error(w, "invalid request", http.StatusBadRequest)
+			return
+		}
+
+		if !valid {
+			http.Error(w, "invalid request signature", http.StatusUnauthorized)
 			return
 		}
 
 		var interaction interaction
-		err := json.NewDecoder(r.Body).Decode(&interaction)
+		err = json.NewDecoder(r.Body).Decode(&interaction)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -73,8 +79,7 @@ func newRootHandler(opts rootHandlerOptions) http.HandlerFunc {
 			return
 		}
 
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Invalid interaction type: %d\n", interaction.Type)
+		http.Error(w, "invalid interaction type", http.StatusBadRequest)
 	}
 }
 
@@ -99,7 +104,7 @@ func main() {
 		log.Fatalf("failed to parse config file: %s\n", err)
 	}
 
-	http.HandleFunc("/", newRootHandler(rootHandlerOptions{
+	http.HandleFunc("/", newDiscordInteractionHandler(discordInteractionHandlerOptions{
 		requestValidator: &ed25519Validator{publicKey: cfg.Discord.PublicKey},
 	}))
 
