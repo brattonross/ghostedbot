@@ -1,0 +1,3 @@
+# ghostedbot
+
+Discord bot
