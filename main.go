@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"crypto/ed25519"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,34 +16,44 @@ type interaction struct {
 	Type int `json:"type"`
 }
 
-type requestValidator interface {
-	validate(r *http.Request) (bool, error)
+type discordInteractionsRequestValidator interface {
+	// validate returns an error if the request is not a valid interactions request.
+	validate(r *http.Request) error
 }
 
 type ed25519Validator struct {
 	publicKey ed25519.PublicKey
 }
 
-func (v *ed25519Validator) validate(r *http.Request) (bool, error) {
+func (v *ed25519Validator) validate(r *http.Request) error {
 	signature := r.Header.Get("X-Signature-Ed25519")
 	timestamp := r.Header.Get("X-Signature-Timestamp")
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	buf := bytes.NewBufferString(timestamp)
 	_, err = buf.Write(body)
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	return ed25519.Verify(v.publicKey, buf.Bytes(), []byte(signature)), nil
+	sb, err := hex.DecodeString(signature)
+	if err != nil {
+		return err
+	}
+
+	if ok := ed25519.Verify(v.publicKey, buf.Bytes(), sb); !ok {
+		return fmt.Errorf("invalid request signature")
+	}
+
+	return nil
 }
 
 type discordInteractionHandlerOptions struct {
-	requestValidator requestValidator
+	requestValidator discordInteractionsRequestValidator
 }
 
 func newDiscordInteractionHandler(opts discordInteractionHandlerOptions) http.HandlerFunc {
@@ -53,14 +64,9 @@ func newDiscordInteractionHandler(opts discordInteractionHandlerOptions) http.Ha
 			return
 		}
 
-		valid, err := opts.requestValidator.validate(r)
+		err := opts.requestValidator.validate(r)
 		if err != nil {
 			log.Printf("failed to validate request: %s\n", err)
-			http.Error(w, "invalid request", http.StatusBadRequest)
-			return
-		}
-
-		if !valid {
 			http.Error(w, "invalid request signature", http.StatusUnauthorized)
 			return
 		}
@@ -86,8 +92,13 @@ func main() {
 	port := os.Getenv("PORT")
 	publicKey := os.Getenv("DISCORD_PUBLIC_KEY")
 
-	http.HandleFunc("/", newDiscordInteractionHandler(discordInteractionHandlerOptions{
-		requestValidator: &ed25519Validator{publicKey: []byte(publicKey)},
+	pb, err := hex.DecodeString(publicKey)
+	if err != nil {
+		log.Fatalf("failed to decode public key: %s\n", err)
+	}
+
+	http.HandleFunc("/interactions", newDiscordInteractionHandler(discordInteractionHandlerOptions{
+		requestValidator: &ed25519Validator{publicKey: pb},
 	}))
 
 	if err := http.ListenAndServe("0.0.0.0:"+port, nil); err != nil {

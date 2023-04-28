@@ -11,14 +11,14 @@ import (
 
 type passingValidator struct{}
 
-func (v *passingValidator) validate(r *http.Request) (bool, error) {
-	return true, nil
+func (v *passingValidator) validate(r *http.Request) error {
+	return nil
 }
 
 type failingValidator struct{}
 
-func (v *failingValidator) validate(r *http.Request) (bool, error) {
-	return false, fmt.Errorf("failed to validate request")
+func (v *failingValidator) validate(r *http.Request) error {
+	return fmt.Errorf("test error")
 }
 
 func TestDiscordInteractionHandler(t *testing.T) {
@@ -28,7 +28,7 @@ func TestDiscordInteractionHandler(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(b))
+		req := httptest.NewRequest(http.MethodPost, "/interactions", bytes.NewReader(b))
 		w := httptest.NewRecorder()
 
 		handler := newDiscordInteractionHandler(discordInteractionHandlerOptions{
@@ -48,7 +48,7 @@ func TestDiscordInteractionHandler(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		req := httptest.NewRequest(http.MethodGet, "/", bytes.NewReader(b))
+		req := httptest.NewRequest(http.MethodGet, "/interactions", bytes.NewReader(b))
 		w := httptest.NewRecorder()
 
 		handler := newDiscordInteractionHandler(discordInteractionHandlerOptions{
