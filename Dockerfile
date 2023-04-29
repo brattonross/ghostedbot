@@ -3,9 +3,7 @@ FROM golang:1.20-alpine as builder
 
 ARG ldflags
 
-ENV GO111MODULE=on \
-    CGO_ENABLED=0 \
-    GOOS=linux
+ENV GO111MODULE=on
 
 WORKDIR /app
 
@@ -14,11 +12,11 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -ldflags $ldflags -o ghostedbot ./
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags $ldflags -o ghostedbot ./
 
 # test
 FROM builder as test
-RUN go test -v ./...
+RUN CGO_ENABLED=0 go test -v ./...
 
 # release
 FROM alpine:latest as release
