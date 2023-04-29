@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/brattonross/ghostedbot/internal/discord"
@@ -17,13 +18,23 @@ import (
 
 // variables that get substituted by the deployment script (-ldflags).
 var (
-	buildHash string
-	buildDate string
+	buildHash          string
+	buildDate          string
+	formattedBuildDate string
 )
 
 type interaction struct {
 	Type int    `json:"type"`
 	Name string `json:"name"`
+}
+
+type interactionResponseData struct {
+	Content string `json:"content"`
+}
+
+type interactionResponse struct {
+	Type int                     `json:"type"`
+	Data interactionResponseData `json:"data"`
 }
 
 type discordInteractionsRequestValidator interface {
@@ -96,6 +107,7 @@ func newDiscordInteractionHandler(opts discordInteractionHandlerOptions) http.Ha
 
 		if interaction.Type == 1 {
 			w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
 			fmt.Fprint(w, "{\"type\": 1}")
 			return
 		}
@@ -104,24 +116,15 @@ func newDiscordInteractionHandler(opts discordInteractionHandlerOptions) http.Ha
 			if interaction.Name == "version" {
 				w.WriteHeader(http.StatusOK)
 				w.Header().Set("Content-Type", "application/json")
-				body, err := json.Marshal(struct {
-					Type int `json:"type"`
-					Data struct {
-						Content string `json:"content"`
-					} `json:"data"`
-				}{
+				err = json.NewEncoder(w).Encode(interactionResponse{
 					Type: 4,
-					Data: struct {
-						Content string `json:"content"`
-					}{
-						Content: fmt.Sprintf("ghostedbot\nbuild hash: %s", buildHash),
+					Data: interactionResponseData{
+						Content: fmt.Sprintf("roastedbot: built at %s, using commit with SHA %s", formattedBuildDate, buildHash),
 					},
 				})
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 				}
-
-				w.Write(body)
 				return
 			}
 		}
@@ -165,6 +168,12 @@ func main() {
 		buildDate = fmt.Sprintf("%d", time.Now().Unix())
 	}
 
-	log.Printf("starting ghostedbot sha:%s, built at: %s\n", buildHash, buildDate)
+	epoch, err := strconv.ParseInt(buildDate, 10, 64)
+	if err != nil {
+		log.Fatalf("failed to parse build date: %s\n", err)
+	}
+	formattedBuildDate = time.Unix(epoch, 0).Format(time.RFC3339)
+
+	log.Printf("starting roastedbot: built at %s using commit with SHA %s\n", formattedBuildDate, buildHash)
 	log.Fatal(http.ListenAndServe("0.0.0.0:"+port, nil))
 }
