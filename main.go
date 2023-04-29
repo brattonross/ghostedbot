@@ -99,14 +99,35 @@ func newDiscordInteractionHandler(opts discordInteractionHandlerOptions) http.Ha
 		}
 
 		if interaction.Type == 2 {
+			log.Printf("interaction received: %s\n", interaction.Name)
 			if interaction.Name == "version" {
 				w.WriteHeader(http.StatusOK)
-				fmt.Fprintf(w, "{\"type\": 4, \"data\": {\"content\": \"ghostedbot\nbuild hash: %s\"}}", buildHash)
+				w.Header().Set("Content-Type", "application/json")
+				body, err := json.Marshal(struct {
+					Type int `json:"type"`
+					Data struct {
+						Content string `json:"content"`
+					} `json:"data"`
+				}{
+					Type: 4,
+					Data: struct {
+						Content string `json:"content"`
+					}{
+						Content: fmt.Sprintf("ghostedbot\nbuild hash: %s", buildHash),
+					},
+				})
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
+
+				w.Write(body)
 				return
 			}
 		}
 
-		http.Error(w, "unsupported interaction type", http.StatusBadRequest)
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, "{\"type\": 4, \"data\": {\"content\": \"Sorry, I don't know how to handle that command.\"}}")
 	}
 }
 
