@@ -123,6 +123,8 @@ func main() {
 		buildHash = "dev"
 	}
 
+	log.Printf("starting ghostedbot with build hash %s\n", buildHash)
+
 	if err := http.ListenAndServe("0.0.0.0:"+port, nil); err != nil {
 		log.Fatalf("failed to start server: %s\n", err)
 	}
