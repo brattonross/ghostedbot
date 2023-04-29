@@ -1,3 +1,3 @@
-module brattonross/ghostedbot
+module github.com/brattonross/ghostedbot
 
 go 1.20
