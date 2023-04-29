@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/brattonross/ghostedbot/internal/discord"
 )
 
 // variables that get substituted by the deployment script (-ldflags).
@@ -63,6 +65,8 @@ func (v *ed25519Validator) validate(r *http.Request) error {
 	return nil
 }
 
+var discordClient *discord.Client
+
 type discordInteractionHandlerOptions struct {
 	requestValidator discordInteractionsRequestValidator
 }
@@ -108,13 +112,23 @@ func newDiscordInteractionHandler(opts discordInteractionHandlerOptions) http.Ha
 
 func main() {
 	port := os.Getenv("PORT")
-	// applicationId := os.Getenv("DISCORD_APPLICATION_ID")
-	// botToken := os.Getenv("DISCORD_BOT_TOKEN")
+	applicationId := os.Getenv("DISCORD_APPLICATION_ID")
+	botToken := os.Getenv("DISCORD_BOT_TOKEN")
 	publicKey := os.Getenv("DISCORD_PUBLIC_KEY")
 
 	pb, err := hex.DecodeString(publicKey)
 	if err != nil {
 		log.Fatalf("failed to decode public key: %s\n", err)
+	}
+
+	discordClient = discord.NewClient(botToken)
+
+	_, err = discordClient.ApplicationCommands.Register(applicationId, &discord.RegisterApplicationCommandOptions{
+		Name:        "version",
+		Description: "Print version information.",
+	})
+	if err != nil {
+		log.Fatalf("failed to register application command: %s\n", err)
 	}
 
 	http.HandleFunc("/interactions", newDiscordInteractionHandler(discordInteractionHandlerOptions{
