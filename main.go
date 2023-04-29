@@ -24,8 +24,10 @@ var (
 )
 
 type interaction struct {
-	Type int    `json:"type"`
-	Name string `json:"name"`
+	Type int `json:"type"`
+	Data struct {
+		Name string `json:"name"`
+	} `json:"data"`
 }
 
 type interactionResponseData struct {
@@ -113,7 +115,7 @@ func newDiscordInteractionHandler(opts discordInteractionHandlerOptions) http.Ha
 		}
 
 		if interaction.Type == 2 {
-			if interaction.Name == "version" {
+			if interaction.Data.Name == "version" {
 				w.WriteHeader(http.StatusOK)
 				w.Header().Set("Content-Type", "application/json")
 				err = json.NewEncoder(w).Encode(interactionResponse{
