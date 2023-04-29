@@ -106,18 +106,16 @@ func newDiscordInteractionHandler(opts discordInteractionHandlerOptions) http.Ha
 		}
 
 		log.Printf("interaction received: %+v", interaction)
+		w.WriteHeader(http.StatusOK)
 
 		if interaction.Type == 1 {
-			w.WriteHeader(http.StatusOK)
-			w.Header().Set("Content-Type", "application/json")
 			fmt.Fprint(w, "{\"type\": 1}")
 			return
 		}
 
 		if interaction.Type == 2 {
 			if interaction.Data.Name == "version" {
-				w.WriteHeader(http.StatusOK)
-				w.Header().Set("Content-Type", "application/json")
+				log.Printf("handling version command")
 				err = json.NewEncoder(w).Encode(interactionResponse{
 					Type: 4,
 					Data: interactionResponseData{
@@ -125,15 +123,24 @@ func newDiscordInteractionHandler(opts discordInteractionHandlerOptions) http.Ha
 					},
 				})
 				if err != nil {
+					log.Printf("failed to encode interaction response: %s\n", err)
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 				}
 				return
 			}
 		}
 
-		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, "{\"type\": 4, \"data\": {\"content\": \"Sorry, I don't know how to handle that command.\"}}")
+		log.Printf("unhandled interaction: %+v", interaction)
+		err = json.NewEncoder(w).Encode(interactionResponse{
+			Type: 4,
+			Data: interactionResponseData{
+				Content: "Sorry, I don't know how to handle that command.",
+			},
+		})
+		if err != nil {
+			log.Printf("failed to encode interaction response: %s\n", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	}
 }
 
