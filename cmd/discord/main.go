@@ -12,8 +12,13 @@ import (
 	"os"
 )
 
+// buildHash is the git commit hash of the build.
+// in production, this gets set by the build script using -ldflags.
+var buildHash string
+
 type interaction struct {
-	Type int `json:"type"`
+	Type int    `json:"type"`
+	Name string `json:"name"`
 }
 
 type discordInteractionsRequestValidator interface {
@@ -87,12 +92,22 @@ func newDiscordInteractionHandler(opts discordInteractionHandlerOptions) http.Ha
 			return
 		}
 
-		http.Error(w, "invalid interaction type", http.StatusBadRequest)
+		if interaction.Type == 2 {
+			if interaction.Name == "version" {
+				w.WriteHeader(http.StatusOK)
+				fmt.Fprintf(w, "{\"type\": 4, \"data\": {\"content\": \"ghostedbot\nbuild hash: %s\"}}", buildHash)
+				return
+			}
+		}
+
+		http.Error(w, "unsupported interaction type", http.StatusBadRequest)
 	}
 }
 
 func main() {
 	port := os.Getenv("PORT")
+	// applicationId := os.Getenv("DISCORD_APPLICATION_ID")
+	// botToken := os.Getenv("DISCORD_BOT_TOKEN")
 	publicKey := os.Getenv("DISCORD_PUBLIC_KEY")
 
 	pb, err := hex.DecodeString(publicKey)
@@ -103,6 +118,10 @@ func main() {
 	http.HandleFunc("/interactions", newDiscordInteractionHandler(discordInteractionHandlerOptions{
 		requestValidator: &ed25519Validator{publicKey: pb},
 	}))
+
+	if buildHash == "" {
+		buildHash = "dev"
+	}
 
 	if err := http.ListenAndServe("0.0.0.0:"+port, nil); err != nil {
 		log.Fatalf("failed to start server: %s\n", err)
