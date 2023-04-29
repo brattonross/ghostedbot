@@ -10,11 +10,14 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
-// buildHash is the git commit hash of the build.
-// in production, this gets set by the build script using -ldflags.
-var buildHash string
+// variables that get substituted by the deployment script (-ldflags).
+var (
+	buildHash string
+	buildDate string
+)
 
 type interaction struct {
 	Type int    `json:"type"`
@@ -123,9 +126,11 @@ func main() {
 		buildHash = "dev"
 	}
 
-	log.Printf("starting ghostedbot with build hash %s\n", buildHash)
-
-	if err := http.ListenAndServe("0.0.0.0:"+port, nil); err != nil {
-		log.Fatalf("failed to start server: %s\n", err)
+	if buildDate == "" {
+		now := time.Now()
+		buildDate = now.Format("Mon Jan 2 15:04:05 MST 2006")
 	}
+
+	log.Printf("starting ghostedbot sha:%s, built at: %s\n", buildHash, buildDate)
+	log.Fatal(http.ListenAndServe("0.0.0.0:"+port, nil))
 }
