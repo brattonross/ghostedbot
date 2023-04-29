@@ -9,11 +9,23 @@ import (
 	"net/url"
 )
 
+func String(v string) *string {
+	return &v
+}
+
+func Int(v int) *int {
+	return &v
+}
+
+func Bool(v bool) *bool {
+	return &v
+}
+
 type ApplicationCommand struct {
-	Id            string `json:"id"`
-	Type          int    `json:"type"`
-	ApplicationId string `json:"application_id"`
-	GuidId        string `json:"guid_id,omitempty"`
+	Id            string  `json:"id"`
+	Type          int     `json:"type"`
+	ApplicationId string  `json:"application_id"`
+	GuidId        *string `json:"guid_id,omitempty"`
 }
 
 type ApplicationCommandOptionChoice struct {
@@ -25,23 +37,23 @@ type ApplicationCommandOption struct {
 	Name        string                           `json:"name"`
 	Description string                           `json:"description"`
 	Type        int                              `json:"type"`
-	Required    bool                             `json:"required"`
-	Choices     []ApplicationCommandOptionChoice `json:"choices"`
+	Required    *bool                            `json:"required,omitempty"`
+	Choices     []ApplicationCommandOptionChoice `json:"choices,omitempty"`
 }
 
 type RegisterApplicationCommandOptions struct {
 	Name        string                     `json:"name"`
-	Type        int                        `json:"type,omitempty"`
-	Description string                     `json:"description,omitempty"`
+	Type        *int                       `json:"type,omitempty"`
+	Description *string                    `json:"description,omitempty"`
 	Options     []ApplicationCommandOption `json:"options,omitempty"`
 }
 
 type ApplicationCommandsClient service
 
-func (c *ApplicationCommandsClient) Register(applicationId string, options *RegisterApplicationCommandOptions) (*ApplicationCommand, error) {
+func (c *ApplicationCommandsClient) Register(applicationId string, options *RegisterApplicationCommandOptions) (*ApplicationCommand, *http.Response, error) {
 	u, err := c.client.BaseURL.Parse(fmt.Sprintf("applications/%s/commands", applicationId))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	var buf io.ReadWriter
@@ -49,13 +61,13 @@ func (c *ApplicationCommandsClient) Register(applicationId string, options *Regi
 		buf = &bytes.Buffer{}
 		err = json.NewEncoder(buf).Encode(options)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
 	req, err := http.NewRequest(http.MethodPost, u.String(), buf)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -63,17 +75,22 @@ func (c *ApplicationCommandsClient) Register(applicationId string, options *Regi
 
 	res, err := c.client.client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, res, err
 	}
 	defer res.Body.Close()
+
+	// Check for 4xx or 5xx status codes
+	if res.StatusCode >= http.StatusBadRequest {
+		return nil, res, fmt.Errorf("unexpected status code %d", res.StatusCode)
+	}
 
 	var command *ApplicationCommand
 	err = json.NewDecoder(res.Body).Decode(&command)
 	if err != nil {
-		return nil, err
+		return nil, res, err
 	}
 
-	return command, nil
+	return command, res, nil
 }
 
 const defaultBaseURL = "https://discord.com/api/v10/"

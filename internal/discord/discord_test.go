@@ -29,14 +29,14 @@ func TestClientRegisterGlobalApplicationCommand(t *testing.T) {
 
 	command, err := client.ApplicationCommands.Register("1234567890", &discord.RegisterApplicationCommandOptions{
 		Name:        "blep",
-		Type:        1,
-		Description: "Send a random adorable animal photo",
+		Type:        discord.Int(1),
+		Description: discord.String("Send a random adorable animal photo"),
 		Options: []discord.ApplicationCommandOption{
 			{
 				Name:        "animal",
 				Description: "The type of animal",
 				Type:        3,
-				Required:    true,
+				Required:    discord.Bool(true),
 				Choices: []discord.ApplicationCommandOptionChoice{
 					{
 						Name:  "Dog",
@@ -56,7 +56,7 @@ func TestClientRegisterGlobalApplicationCommand(t *testing.T) {
 				Name:        "only_smol",
 				Description: "Whether to show only baby animals",
 				Type:        5,
-				Required:    false,
+				Required:    discord.Bool(false),
 			},
 		},
 	})
