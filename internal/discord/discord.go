@@ -71,7 +71,9 @@ func (c *ApplicationCommandsClient) Register(applicationId string, options *Regi
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("Bot %s", c.client.botToken))
+	auth := fmt.Sprintf("Bot %s", c.client.botToken)
+	fmt.Println(auth)
+	req.Header.Set("Authorization", auth)
 
 	res, err := c.client.client.Do(req)
 	if err != nil {
