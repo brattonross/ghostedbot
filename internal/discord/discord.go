@@ -71,9 +71,7 @@ func (c *ApplicationCommandsClient) Register(applicationId string, options *Regi
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	auth := fmt.Sprintf("Bot %s", c.client.botToken)
-	fmt.Println(auth)
-	req.Header.Set("Authorization", auth)
+	req.Header.Set("Authorization", fmt.Sprintf("Bot %s", c.client.botToken))
 
 	res, err := c.client.client.Do(req)
 	if err != nil {
@@ -121,8 +119,9 @@ func NewClient(botToken string) *Client {
 	baseURL, _ := url.Parse(defaultBaseURL)
 
 	c := &Client{
-		client:  http.DefaultClient,
-		BaseURL: baseURL,
+		client:   http.DefaultClient,
+		BaseURL:  baseURL,
+		botToken: botToken,
 	}
 	c.common.client = c
 	c.ApplicationCommands = (*ApplicationCommandsClient)(&c.common)
