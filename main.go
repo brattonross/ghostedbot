@@ -23,20 +23,20 @@ var (
 	formattedBuildDate string
 )
 
-type interaction struct {
+type Interaction struct {
 	Type int `json:"type"`
 	Data struct {
 		Name string `json:"name"`
 	} `json:"data"`
 }
 
-type interactionResponseData struct {
+type InteractionResponseData struct {
 	Content string `json:"content"`
 }
 
-type interactionResponse struct {
+type InteractionResponse struct {
 	Type int                     `json:"type"`
-	Data interactionResponseData `json:"data"`
+	Data InteractionResponseData `json:"data"`
 }
 
 type discordInteractionsRequestValidator interface {
@@ -98,7 +98,7 @@ func newDiscordInteractionHandler(opts discordInteractionHandlerOptions) http.Ha
 			return
 		}
 
-		var interaction interaction
+		var interaction Interaction
 		err = json.NewDecoder(r.Body).Decode(&interaction)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -116,9 +116,9 @@ func newDiscordInteractionHandler(opts discordInteractionHandlerOptions) http.Ha
 		if interaction.Type == 2 {
 			if interaction.Data.Name == "version" {
 				log.Printf("handling version command")
-				err = json.NewEncoder(w).Encode(interactionResponse{
+				err = json.NewEncoder(w).Encode(InteractionResponse{
 					Type: 4,
-					Data: interactionResponseData{
+					Data: InteractionResponseData{
 						Content: fmt.Sprintf("roastedbot: built at %s, using commit with SHA %s", formattedBuildDate, buildHash),
 					},
 				})
@@ -131,9 +131,9 @@ func newDiscordInteractionHandler(opts discordInteractionHandlerOptions) http.Ha
 		}
 
 		log.Printf("unhandled interaction: %+v", interaction)
-		err = json.NewEncoder(w).Encode(interactionResponse{
+		err = json.NewEncoder(w).Encode(InteractionResponse{
 			Type: 4,
-			Data: interactionResponseData{
+			Data: InteractionResponseData{
 				Content: "Sorry, I don't know how to handle that command.",
 			},
 		})

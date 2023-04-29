@@ -23,7 +23,7 @@ func (v *failingValidator) validate(r *http.Request) error {
 
 func TestDiscordInteractionHandler(t *testing.T) {
 	t.Run("Returns 401 if sent invalid headers", func(t *testing.T) {
-		b, err := json.Marshal(&interaction{Type: 1})
+		b, err := json.Marshal(&Interaction{Type: 1})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -43,7 +43,7 @@ func TestDiscordInteractionHandler(t *testing.T) {
 	})
 
 	t.Run("Returns 405 if sent invalid method", func(t *testing.T) {
-		b, err := json.Marshal(&interaction{Type: 1})
+		b, err := json.Marshal(&Interaction{Type: 1})
 		if err != nil {
 			t.Fatal(err)
 		}
