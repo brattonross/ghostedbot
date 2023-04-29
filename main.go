@@ -92,6 +92,8 @@ func newDiscordInteractionHandler(opts discordInteractionHandlerOptions) http.Ha
 			return
 		}
 
+		log.Printf("interaction received: %+v", interaction)
+
 		if interaction.Type == 1 {
 			w.WriteHeader(http.StatusOK)
 			fmt.Fprint(w, "{\"type\": 1}")
@@ -99,7 +101,6 @@ func newDiscordInteractionHandler(opts discordInteractionHandlerOptions) http.Ha
 		}
 
 		if interaction.Type == 2 {
-			log.Printf("interaction received: %s\n", interaction.Name)
 			if interaction.Name == "version" {
 				w.WriteHeader(http.StatusOK)
 				w.Header().Set("Content-Type", "application/json")
