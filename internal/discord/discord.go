@@ -50,10 +50,10 @@ type RegisterApplicationCommandOptions struct {
 
 type ApplicationCommandsClient service
 
-func (c *ApplicationCommandsClient) Register(applicationId string, options *RegisterApplicationCommandOptions) (*ApplicationCommand, *http.Response, error) {
+func (c *ApplicationCommandsClient) Register(applicationId string, options *RegisterApplicationCommandOptions) (*ApplicationCommand, error) {
 	u, err := c.client.BaseURL.Parse(fmt.Sprintf("applications/%s/commands", applicationId))
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	var buf io.ReadWriter
@@ -61,13 +61,13 @@ func (c *ApplicationCommandsClient) Register(applicationId string, options *Regi
 		buf = &bytes.Buffer{}
 		err = json.NewEncoder(buf).Encode(options)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
 	req, err := http.NewRequest(http.MethodPost, u.String(), buf)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -75,22 +75,26 @@ func (c *ApplicationCommandsClient) Register(applicationId string, options *Regi
 
 	res, err := c.client.client.Do(req)
 	if err != nil {
-		return nil, res, err
+		return nil, err
 	}
 	defer res.Body.Close()
 
 	// Check for 4xx or 5xx status codes
 	if res.StatusCode >= http.StatusBadRequest {
-		return nil, res, fmt.Errorf("unexpected status code %d", res.StatusCode)
+		return nil, fmt.Errorf("unexpected status code %d", res.StatusCode)
 	}
 
 	var command *ApplicationCommand
 	err = json.NewDecoder(res.Body).Decode(&command)
+	if err == io.EOF {
+		// ignore EOF errors caused by empty response body
+		err = nil
+	}
 	if err != nil {
-		return nil, res, err
+		return nil, err
 	}
 
-	return command, res, nil
+	return command, nil
 }
 
 const defaultBaseURL = "https://discord.com/api/v10/"

@@ -123,17 +123,12 @@ func main() {
 
 	discordClient = discord.NewClient(botToken)
 
-	_, res, err := discordClient.ApplicationCommands.Register(applicationId, &discord.RegisterApplicationCommandOptions{
+	_, err = discordClient.ApplicationCommands.Register(applicationId, &discord.RegisterApplicationCommandOptions{
 		Name:        "version",
 		Description: discord.String("Print version information."),
 	})
 	if err != nil {
-		body, err := io.ReadAll(res.Body)
-		if err != nil {
-			log.Fatalf("failed to register application command: %s\nresponse: %s", err, body)
-		} else {
-			log.Fatalf("failed to register application command: %s\n", err)
-		}
+		log.Fatalf("failed to register application command: %s\n", err)
 	}
 
 	http.HandleFunc("/interactions", newDiscordInteractionHandler(discordInteractionHandlerOptions{
