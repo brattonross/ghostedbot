@@ -77,7 +77,6 @@ func newDiscordInteractionHandler(opts discordInteractionHandlerOptions) http.Ha
 
 		err := opts.requestValidator.validate(r)
 		if err != nil {
-			log.Printf("failed to validate request: %s\n", err)
 			http.Error(w, "invalid request signature", http.StatusUnauthorized)
 			return
 		}
@@ -127,8 +126,7 @@ func main() {
 	}
 
 	if buildDate == "" {
-		now := time.Now()
-		buildDate = now.Format("Mon Jan 2 15:04:05 MST 2006")
+		buildDate = fmt.Sprintf("%d", time.Now().Unix())
 	}
 
 	log.Printf("starting ghostedbot sha:%s, built at: %s\n", buildHash, buildDate)
