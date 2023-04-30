@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/ed25519"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -23,32 +22,11 @@ var (
 	formattedBuildDate string
 )
 
-type Interaction struct {
-	Type int `json:"type"`
-	Data struct {
-		Name string `json:"name"`
-	} `json:"data"`
-}
-
-type InteractionResponseData struct {
-	Content string `json:"content"`
-}
-
-type InteractionResponse struct {
-	Type int                     `json:"type"`
-	Data InteractionResponseData `json:"data"`
-}
-
-type discordInteractionsRequestValidator interface {
-	// validate returns an error if the request is not a valid interactions request.
-	validate(r *http.Request) error
-}
-
 type ed25519Validator struct {
 	publicKey ed25519.PublicKey
 }
 
-func (v *ed25519Validator) validate(r *http.Request) error {
+func (v *ed25519Validator) Validate(r *http.Request) error {
 	signature := r.Header.Get("X-Signature-Ed25519")
 	sig, err := hex.DecodeString(signature)
 	if err != nil {
@@ -80,70 +58,6 @@ func (v *ed25519Validator) validate(r *http.Request) error {
 
 var discordClient *discord.Client
 
-type discordInteractionHandlerOptions struct {
-	requestValidator discordInteractionsRequestValidator
-}
-
-func newDiscordInteractionHandler(opts discordInteractionHandlerOptions) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			w.Header().Add("Allow", http.MethodPost)
-			return
-		}
-
-		err := opts.requestValidator.validate(r)
-		if err != nil {
-			http.Error(w, "invalid request signature", http.StatusUnauthorized)
-			return
-		}
-
-		var interaction Interaction
-		err = json.NewDecoder(r.Body).Decode(&interaction)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		log.Printf("interaction received: %+v", interaction)
-		w.WriteHeader(http.StatusOK)
-
-		if interaction.Type == 1 {
-			fmt.Fprint(w, "{\"type\": 1}")
-			return
-		}
-
-		if interaction.Type == 2 {
-			if interaction.Data.Name == "version" {
-				log.Printf("handling version command")
-				err = json.NewEncoder(w).Encode(InteractionResponse{
-					Type: 4,
-					Data: InteractionResponseData{
-						Content: fmt.Sprintf("roastedbot: built at %s, using commit with SHA %s", formattedBuildDate, buildHash),
-					},
-				})
-				if err != nil {
-					log.Printf("failed to encode interaction response: %s\n", err)
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-				}
-				return
-			}
-		}
-
-		log.Printf("unhandled interaction: %+v", interaction)
-		err = json.NewEncoder(w).Encode(InteractionResponse{
-			Type: 4,
-			Data: InteractionResponseData{
-				Content: "Sorry, I don't know how to handle that command.",
-			},
-		})
-		if err != nil {
-			log.Printf("failed to encode interaction response: %s\n", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-	}
-}
-
 func main() {
 	port := os.Getenv("PORT")
 	applicationId := os.Getenv("DISCORD_APPLICATION_ID")
@@ -165,9 +79,8 @@ func main() {
 		log.Fatalf("failed to register application command: %s\n", err)
 	}
 
-	http.HandleFunc("/interactions", newDiscordInteractionHandler(discordInteractionHandlerOptions{
-		requestValidator: &ed25519Validator{publicKey: pb},
-	}))
+	validator := &ed25519Validator{publicKey: pb}
+	http.HandleFunc("/interactions", discord.NewInteractionsHandler(validator))
 
 	if buildHash == "" {
 		buildHash = "dev"

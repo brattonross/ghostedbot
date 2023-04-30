@@ -5,9 +5,77 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 )
+
+// InteractionsRequestValidator validates incoming requests to the interactions endpoint.
+type InteractionsRequestValidator interface {
+	// Validate returns an error if the request is not a valid interactions request.
+	Validate(r *http.Request) error
+}
+
+func NewInteractionsHandler(validator InteractionsRequestValidator) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			w.Header().Add("Allow", http.MethodPost)
+			return
+		}
+
+		err := validator.Validate(r)
+		if err != nil {
+			http.Error(w, "invalid request signature", http.StatusUnauthorized)
+			return
+		}
+
+		var interaction Interaction
+		err = json.NewDecoder(r.Body).Decode(&interaction)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		log.Printf("interaction received: %+v", interaction)
+		w.WriteHeader(http.StatusOK)
+
+		if interaction.Type == 1 {
+			fmt.Fprint(w, "{\"type\": 1}")
+			return
+		}
+
+		if interaction.Type == 2 {
+			if interaction.Data.Name == "version" {
+				log.Printf("handling version command")
+				err = json.NewEncoder(w).Encode(InteractionResponse{
+					Type: 4,
+					Data: InteractionResponseData{
+						// Content: fmt.Sprintf("roastedbot: built at %s, using commit with SHA %s", formattedBuildDate, buildHash),
+						Content: "TODO",
+					},
+				})
+				if err != nil {
+					log.Printf("failed to encode interaction response: %s\n", err)
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
+				return
+			}
+		}
+
+		log.Printf("unhandled interaction: %+v", interaction)
+		err = json.NewEncoder(w).Encode(InteractionResponse{
+			Type: 4,
+			Data: InteractionResponseData{
+				Content: "Sorry, I don't know how to handle that command.",
+			},
+		})
+		if err != nil {
+			log.Printf("failed to encode interaction response: %s\n", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}
+}
 
 func String(v string) *string {
 	return &v
@@ -19,6 +87,22 @@ func Int(v int) *int {
 
 func Bool(v bool) *bool {
 	return &v
+}
+
+type Interaction struct {
+	Type int `json:"type"`
+	Data struct {
+		Name string `json:"name"`
+	} `json:"data"`
+}
+
+type InteractionResponseData struct {
+	Content string `json:"content"`
+}
+
+type InteractionResponse struct {
+	Type int                     `json:"type"`
+	Data InteractionResponseData `json:"data"`
 }
 
 type ApplicationCommand struct {

@@ -1,6 +1,9 @@
 package discord_test
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -8,6 +11,60 @@ import (
 
 	"github.com/brattonross/ghostedbot/internal/discord"
 )
+
+type passingValidator struct{}
+
+func (v *passingValidator) Validate(r *http.Request) error {
+	return nil
+}
+
+type failingValidator struct{}
+
+func (v *failingValidator) Validate(r *http.Request) error {
+	return fmt.Errorf("test error")
+}
+
+func TestNewInteractionsHandler(t *testing.T) {
+	t.Run("Returns 401 if sent invalid headers", func(t *testing.T) {
+		b, err := json.Marshal(&discord.Interaction{Type: 1})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		req := httptest.NewRequest(http.MethodPost, "/interactions", bytes.NewReader(b))
+		w := httptest.NewRecorder()
+
+		handler := discord.NewInteractionsHandler(&failingValidator{})
+
+		handler(w, req)
+
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("expected response status code %d, got %d", http.StatusUnauthorized, w.Code)
+		}
+	})
+
+	t.Run("Returns 405 if sent invalid method", func(t *testing.T) {
+		b, err := json.Marshal(&discord.Interaction{Type: 1})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		req := httptest.NewRequest(http.MethodGet, "/interactions", bytes.NewReader(b))
+		w := httptest.NewRecorder()
+
+		handler := discord.NewInteractionsHandler(&passingValidator{})
+
+		handler(w, req)
+
+		if w.Code != http.StatusMethodNotAllowed {
+			t.Errorf("expected response status code %d, got %d", http.StatusMethodNotAllowed, w.Code)
+		}
+
+		if w.Header().Get("Allow") != http.MethodPost {
+			t.Errorf("expected Allow header to be %s, got %s", http.MethodPost, w.Header().Get("Allow"))
+		}
+	})
+}
 
 func TestClientRegisterGlobalApplicationCommand(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
