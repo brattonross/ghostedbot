@@ -82,6 +82,15 @@ func main() {
 	validator := &ed25519Validator{publicKey: pb}
 	handler := discord.NewInteractionsHandler(validator)
 
+	handler.RegisterApplicationCommandHandler("test", func(ctx *discord.InteractionContext) (*discord.InteractionResponse, error) {
+		return &discord.InteractionResponse{
+			Type: discord.InteractionResponseTypeChannelMessageWithSource,
+			Data: &discord.InteractionResponseData{
+				Content: "test successful <:AlienUnpleased:940285855292080149>",
+			},
+		}, nil
+	})
+
 	handler.RegisterApplicationCommandHandler("version", func(ctx *discord.InteractionContext) (*discord.InteractionResponse, error) {
 		return &discord.InteractionResponse{
 			Type: discord.InteractionResponseTypeChannelMessageWithSource,

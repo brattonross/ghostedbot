@@ -83,9 +83,15 @@ func (h *InteractionsHandler) handleApplicationCommandInteraction(w http.Respons
 	}
 
 	w.WriteHeader(http.StatusOK)
-	err = json.NewEncoder(w).Encode(res)
+	bs, err := json.Marshal(res)
 	if err != nil {
-		log.Printf("failed to encode interaction response: %s\n", err)
+		log.Printf("failed to marshal response: %s\n", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	log.Printf("responding to interaction %s with response: %s", interaction.Data.Id, string(bs))
+	_, err = w.Write(bs)
+	if err != nil {
+		log.Printf("failed to write response: %s\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
