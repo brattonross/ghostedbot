@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"strconv"
 	"time"
@@ -97,12 +98,29 @@ func main() {
 		return &discord.InteractionResponse{
 			Type: discord.InteractionResponseTypeChannelMessageWithSource,
 			Data: &discord.InteractionResponseData{
-				Content: discord.String(fmt.Sprintf("Built at %s using commit with SHA %s", formattedBuildDate, buildHash)),
+				Content: discord.String(fmt.Sprintf("Built at %s using commit %s", formattedBuildDate, buildHash)),
 			},
 		}, nil
 	})
 
-	http.HandleFunc("/interactions", handler.ServeHTTP)
+	http.HandleFunc("/interactions", func(w http.ResponseWriter, r *http.Request) {
+		// TODO: Why do the interaction responses only become valid after
+		// we use a recorder to write the response?
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, r)
+
+		for k, v := range rec.Header() {
+			w.Header()[k] = v
+		}
+
+		w.WriteHeader(rec.Code)
+
+		log.Printf("response body: %s\n", rec.Body.String())
+		_, err := rec.Body.WriteTo(w)
+		if err != nil {
+			log.Printf("failed to write response body: %s\n", err)
+		}
+	})
 
 	if buildHash == "" {
 		buildHash = "dev"
@@ -119,5 +137,10 @@ func main() {
 	formattedBuildDate = time.Unix(epoch, 0).Format(time.RFC3339)
 
 	log.Printf("starting roastedbot: built at %s using commit with SHA %s\n", formattedBuildDate, buildHash)
+
+	if port == "" {
+		port = "8080"
+	}
+
 	log.Fatal(http.ListenAndServe("0.0.0.0:"+port, nil))
 }

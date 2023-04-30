@@ -87,8 +87,8 @@ func (h *InteractionsHandler) handlePingInteraction(w http.ResponseWriter, inter
 }
 
 func (h *InteractionsHandler) handleApplicationCommandInteraction(w http.ResponseWriter, interaction *Interaction) {
-	handler := h.applicationCommands[interaction.Data.Name]
-	if handler == nil {
+	handler, ok := h.applicationCommands[interaction.Data.Name]
+	if !ok {
 		h.handleUnhandledInteraction(w, interaction)
 		return
 	}
@@ -138,12 +138,11 @@ func (h *InteractionsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	log.Printf("interaction received: %+v", interaction)
 
-	if interaction.Type == InteractionTypePing {
+	switch {
+	case interaction.Type == InteractionTypePing:
 		h.handlePingInteraction(w, &interaction)
 		return
-	}
-
-	if interaction.Type == InteractionTypeApplicationCommand {
+	case interaction.Type == InteractionTypeApplicationCommand:
 		h.handleApplicationCommandInteraction(w, &interaction)
 		return
 	}
