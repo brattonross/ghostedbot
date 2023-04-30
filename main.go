@@ -79,7 +79,7 @@ func main() {
 		return &discord.InteractionResponse{
 			Type: discord.InteractionResponseTypeChannelMessageWithSource,
 			Data: &discord.InteractionResponseData{
-				Content: "test successful <:AlienUnpleased:940285855292080149>",
+				Content: discord.String("test successful <:AlienUnpleased:940285855292080149>"),
 			},
 		}, nil
 	})
@@ -97,7 +97,7 @@ func main() {
 		return &discord.InteractionResponse{
 			Type: discord.InteractionResponseTypeChannelMessageWithSource,
 			Data: &discord.InteractionResponseData{
-				Content: fmt.Sprintf("Built at %s using commit with SHA %s", formattedBuildDate, buildHash),
+				Content: discord.String(fmt.Sprintf("Built at %s using commit with SHA %s", formattedBuildDate, buildHash)),
 			},
 		}, nil
 	})

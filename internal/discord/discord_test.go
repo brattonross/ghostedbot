@@ -148,7 +148,7 @@ func TestNewInteractionsHandler(t *testing.T) {
 			return &discord.InteractionResponse{
 				Type: discord.InteractionResponseTypeChannelMessageWithSource,
 				Data: &discord.InteractionResponseData{
-					Content: "You requested a dog",
+					Content: discord.String("You requested a dog"),
 				},
 			}, nil
 		})
@@ -172,8 +172,8 @@ func TestNewInteractionsHandler(t *testing.T) {
 			t.Errorf("expected response type %d, got %d", discord.InteractionResponseTypeChannelMessageWithSource, response.Type)
 		}
 
-		if response.Data.Content != "You requested a dog" {
-			t.Errorf("expected response content %s, got %s", "You requested a dog", response.Data.Content)
+		if *response.Data.Content != "You requested a dog" {
+			t.Errorf("expected response content %s, got %s", "You requested a dog", *response.Data.Content)
 		}
 	})
 }

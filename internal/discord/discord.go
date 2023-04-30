@@ -40,12 +40,18 @@ const (
 )
 
 type InteractionResponseData struct {
-	Content string `json:"content"`
+	TTS             *bool         `json:"tts,omitempty"`
+	Content         *string       `json:"content,omitempty"`
+	Embeds          []interface{} `json:"embeds,omitempty"`
+	AllowedMentions *interface{}  `json:"allowed_mentions,omitempty"`
+	Flags           *int          `json:"flags,omitempty"`
+	Components      []interface{} `json:"components,omitempty"`
+	Attachments     []interface{} `json:"attachments,omitempty"`
 }
 
 type InteractionResponse struct {
-	Type int                      `json:"type"`
-	Data *InteractionResponseData `json:"data"`
+	Type int                      `json:"type,omitempty"`
+	Data *InteractionResponseData `json:"data,omitempty"`
 }
 
 // InteractionsRequestValidator validates incoming requests to the interactions endpoint.
@@ -261,7 +267,7 @@ func (c *ApplicationCommandsClient) Register(applicationId string, options *Regi
 		return nil, fmt.Errorf("unexpected status code %d", res.StatusCode)
 	}
 
-	var command *ApplicationCommand
+	var command ApplicationCommand
 	err = json.NewDecoder(res.Body).Decode(&command)
 	if err == io.EOF {
 		// ignore EOF errors caused by empty response body
@@ -271,7 +277,7 @@ func (c *ApplicationCommandsClient) Register(applicationId string, options *Regi
 		return nil, err
 	}
 
-	return command, nil
+	return &command, nil
 }
 
 const defaultBaseURL = "https://discord.com/api/v10/"
