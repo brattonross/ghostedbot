@@ -26,7 +26,7 @@ func (v *failingValidator) Validate(r *http.Request) error {
 
 func TestNewInteractionsHandler(t *testing.T) {
 	t.Run("Returns 401 if sent invalid headers", func(t *testing.T) {
-		b, err := json.Marshal(&discord.Interaction{Type: 1})
+		b, err := json.Marshal(&discord.Interaction{Type: discord.InteractionTypePing})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -44,7 +44,7 @@ func TestNewInteractionsHandler(t *testing.T) {
 	})
 
 	t.Run("Returns 405 if sent invalid method", func(t *testing.T) {
-		b, err := json.Marshal(&discord.Interaction{Type: 1})
+		b, err := json.Marshal(&discord.Interaction{Type: discord.InteractionTypePing})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -66,7 +66,7 @@ func TestNewInteractionsHandler(t *testing.T) {
 	})
 
 	t.Run("Correctly handles PING interaction", func(t *testing.T) {
-		b, err := json.Marshal(&discord.Interaction{Type: 1})
+		b, err := json.Marshal(&discord.Interaction{Type: discord.InteractionTypePing})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -87,8 +87,8 @@ func TestNewInteractionsHandler(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if response.Type != 1 {
-			t.Errorf("expected response type %d, got %d", 1, response.Type)
+		if response.Type != discord.InteractionResponseTypePong {
+			t.Errorf("expected response type %d, got %d", discord.InteractionResponseTypePong, response.Type)
 		}
 	})
 }
@@ -113,13 +113,13 @@ func TestClientRegisterGlobalApplicationCommand(t *testing.T) {
 
 	command, err := client.ApplicationCommands.Register("1234567890", &discord.RegisterApplicationCommandOptions{
 		Name:        "blep",
-		Type:        discord.Int(1),
+		Type:        discord.Int(discord.ApplicationCommandTypeChatInput),
 		Description: discord.String("Send a random adorable animal photo"),
 		Options: []discord.ApplicationCommandOption{
 			{
 				Name:        "animal",
 				Description: "The type of animal",
-				Type:        3,
+				Type:        discord.ApplicationCommandOptionTypeString,
 				Required:    discord.Bool(true),
 				Choices: []discord.ApplicationCommandOptionChoice{
 					{
@@ -139,7 +139,7 @@ func TestClientRegisterGlobalApplicationCommand(t *testing.T) {
 			{
 				Name:        "only_smol",
 				Description: "Whether to show only baby animals",
-				Type:        5,
+				Type:        discord.ApplicationCommandOptionTypeBoolean,
 				Required:    discord.Bool(false),
 			},
 		},

@@ -10,6 +10,44 @@ import (
 	"net/url"
 )
 
+func String(v string) *string {
+	return &v
+}
+
+func Int(v int) *int {
+	return &v
+}
+
+func Bool(v bool) *bool {
+	return &v
+}
+
+const (
+	InteractionTypePing               = 1
+	InteractionTypeApplicationCommand = 2
+)
+
+type Interaction struct {
+	Type int `json:"type"`
+	Data struct {
+		Name string `json:"name"`
+	} `json:"data"`
+}
+
+const (
+	InteractionResponseTypePong                     = 1
+	InteractionResponseTypeChannelMessageWithSource = 4
+)
+
+type InteractionResponseData struct {
+	Content string `json:"content"`
+}
+
+type InteractionResponse struct {
+	Type int                     `json:"type"`
+	Data InteractionResponseData `json:"data"`
+}
+
 // InteractionsRequestValidator validates incoming requests to the interactions endpoint.
 type InteractionsRequestValidator interface {
 	// Validate returns an error if the request is not a valid interactions request.
@@ -40,16 +78,16 @@ func NewInteractionsHandler(validator InteractionsRequestValidator) http.Handler
 		log.Printf("interaction received: %+v", interaction)
 		w.WriteHeader(http.StatusOK)
 
-		if interaction.Type == 1 {
-			fmt.Fprint(w, "{\"type\": 1}")
+		if interaction.Type == InteractionTypePing {
+			fmt.Fprintf(w, "{\"type\": %d}", InteractionResponseTypePong)
 			return
 		}
 
-		if interaction.Type == 2 {
+		if interaction.Type == InteractionTypeApplicationCommand {
 			if interaction.Data.Name == "version" {
 				log.Printf("handling version command")
 				err = json.NewEncoder(w).Encode(InteractionResponse{
-					Type: 4,
+					Type: InteractionResponseTypeChannelMessageWithSource,
 					Data: InteractionResponseData{
 						// Content: fmt.Sprintf("roastedbot: built at %s, using commit with SHA %s", formattedBuildDate, buildHash),
 						Content: "TODO",
@@ -65,7 +103,7 @@ func NewInteractionsHandler(validator InteractionsRequestValidator) http.Handler
 
 		log.Printf("unhandled interaction: %+v", interaction)
 		err = json.NewEncoder(w).Encode(InteractionResponse{
-			Type: 4,
+			Type: InteractionResponseTypeChannelMessageWithSource,
 			Data: InteractionResponseData{
 				Content: "Sorry, I don't know how to handle that command.",
 			},
@@ -77,33 +115,11 @@ func NewInteractionsHandler(validator InteractionsRequestValidator) http.Handler
 	}
 }
 
-func String(v string) *string {
-	return &v
-}
-
-func Int(v int) *int {
-	return &v
-}
-
-func Bool(v bool) *bool {
-	return &v
-}
-
-type Interaction struct {
-	Type int `json:"type"`
-	Data struct {
-		Name string `json:"name"`
-	} `json:"data"`
-}
-
-type InteractionResponseData struct {
-	Content string `json:"content"`
-}
-
-type InteractionResponse struct {
-	Type int                     `json:"type"`
-	Data InteractionResponseData `json:"data"`
-}
+const (
+	ApplicationCommandTypeChatInput = 1
+	ApplicationCommandTypeUser      = 2
+	ApplicationCommandTypeMessage   = 3
+)
 
 type ApplicationCommand struct {
 	Id            string  `json:"id"`
@@ -116,6 +132,20 @@ type ApplicationCommandOptionChoice struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
 }
+
+const (
+	ApplicationCommandOptionTypeSubCommand      = 1
+	ApplicationCommandOptionTypeSubCommandGroup = 2
+	ApplicationCommandOptionTypeString          = 3
+	ApplicationCommandOptionTypeInteger         = 4
+	ApplicationCommandOptionTypeBoolean         = 5
+	ApplicationCommandOptionTypeUser            = 6
+	ApplicationCommandOptionTypeChannel         = 7
+	ApplicationCommandOptionTypeRole            = 8
+	ApplicationCommandOptionTypeMentionable     = 9
+	ApplicationCommandOptionTypeNumber          = 10
+	ApplicationCommandOptionTypeAttachment      = 11
+)
 
 type ApplicationCommandOption struct {
 	Name        string                           `json:"name"`
