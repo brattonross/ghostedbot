@@ -129,7 +129,7 @@ func TestNewInteractionsHandler(t *testing.T) {
 
 			return &discord.InteractionResponse{
 				Type: discord.InteractionResponseTypeChannelMessageWithSource,
-				Data: discord.InteractionResponseData{
+				Data: &discord.InteractionResponseData{
 					Content: "You requested a dog",
 				},
 			}, nil

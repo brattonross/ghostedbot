@@ -82,8 +82,14 @@ func main() {
 	validator := &ed25519Validator{publicKey: pb}
 	handler := discord.NewInteractionsHandler(validator)
 
-	// handler.RegisterApplicationCommandHandler("version", func(ctx *discord.InteractionContext) error {
-	// })
+	handler.RegisterApplicationCommandHandler("version", func(ctx *discord.InteractionContext) (*discord.InteractionResponse, error) {
+		return &discord.InteractionResponse{
+			Type: discord.InteractionResponseTypeChannelMessageWithSource,
+			Data: &discord.InteractionResponseData{
+				Content: fmt.Sprintf("Built at %s using commit with SHA %s", formattedBuildDate, buildHash),
+			},
+		}, nil
+	})
 
 	http.HandleFunc("/interactions", handler.ServeHTTP)
 

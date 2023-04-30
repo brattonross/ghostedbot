@@ -44,8 +44,8 @@ type InteractionResponseData struct {
 }
 
 type InteractionResponse struct {
-	Type int                     `json:"type"`
-	Data InteractionResponseData `json:"data"`
+	Type int                      `json:"type"`
+	Data *InteractionResponseData `json:"data"`
 }
 
 // InteractionsRequestValidator validates incoming requests to the interactions endpoint.
@@ -63,7 +63,7 @@ func (h *InteractionsHandler) handleUnhandledInteraction(w http.ResponseWriter, 
 	log.Printf("unhandled interaction: %+v", interaction)
 	res := InteractionResponse{
 		Type: InteractionResponseTypeChannelMessageWithSource,
-		Data: InteractionResponseData{
+		Data: &InteractionResponseData{
 			Content: "Sorry, I don't know how to handle that.",
 		},
 	}
