@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"testing"
 
 	"github.com/brattonross/ghostedbot/internal/discord"
@@ -161,6 +162,11 @@ func TestNewInteractionsHandler(t *testing.T) {
 
 		if w.Header().Get("Content-Type") != "application/json" {
 			t.Errorf("expected response content type %s, got %s", "application/json", w.Header().Get("Content-Type"))
+		}
+
+		resLen := strconv.Itoa(len([]byte("{\"type\":4,\"data\":{\"content\":\"You requested a dog\"}}")))
+		if w.Header().Get("Content-Length") != resLen {
+			t.Errorf("expected response content length %s, got %s", resLen, w.Header().Get("Content-Length"))
 		}
 
 		var response discord.InteractionResponse

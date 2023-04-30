@@ -104,6 +104,9 @@ func (h *InteractionsHandler) handleApplicationCommandInteraction(w http.Respons
 		log.Printf("failed to marshal response: %s\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+
+	w.Header().Add("Content-Length", fmt.Sprintf("%d", len(bs)))
+
 	log.Printf("responding to interaction %s with response: %s", interaction.Data.Id, string(bs))
 	_, err = w.Write(bs)
 	if err != nil {
@@ -234,9 +237,8 @@ func (c *ApplicationCommandsClient) Register(applicationId string, options *Regi
 		return nil, err
 	}
 
-	var buf io.ReadWriter
+	buf := &bytes.Buffer{}
 	if options != nil {
-		buf = &bytes.Buffer{}
 		err = json.NewEncoder(buf).Encode(options)
 		if err != nil {
 			return nil, err
