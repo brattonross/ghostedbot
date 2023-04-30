@@ -36,7 +36,7 @@ func TestNewInteractionsHandler(t *testing.T) {
 
 		handler := discord.NewInteractionsHandler(&failingValidator{})
 
-		handler(w, req)
+		handler.ServeHTTP(w, req)
 
 		if w.Code != http.StatusUnauthorized {
 			t.Errorf("expected response status code %d, got %d", http.StatusUnauthorized, w.Code)
@@ -54,7 +54,7 @@ func TestNewInteractionsHandler(t *testing.T) {
 
 		handler := discord.NewInteractionsHandler(&passingValidator{})
 
-		handler(w, req)
+		handler.ServeHTTP(w, req)
 
 		if w.Code != http.StatusMethodNotAllowed {
 			t.Errorf("expected response status code %d, got %d", http.StatusMethodNotAllowed, w.Code)
@@ -76,7 +76,7 @@ func TestNewInteractionsHandler(t *testing.T) {
 
 		handler := discord.NewInteractionsHandler(&passingValidator{})
 
-		handler(w, req)
+		handler.ServeHTTP(w, req)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("expected response status code %d, got %d", http.StatusOK, w.Code)
@@ -89,6 +89,69 @@ func TestNewInteractionsHandler(t *testing.T) {
 
 		if response.Type != discord.InteractionResponseTypePong {
 			t.Errorf("expected response type %d, got %d", discord.InteractionResponseTypePong, response.Type)
+		}
+	})
+
+	t.Run("Correctly handles application command interaction", func(t *testing.T) {
+		b, err := json.Marshal(&discord.Interaction{
+			Type: discord.InteractionTypeApplicationCommand,
+			Data: discord.ApplicationCommandInteractionData{
+				Id:   "1234567890",
+				Name: "blep",
+				Options: []discord.ApplicationCommandInteractionDataOption{
+					{
+						Name:  "animal",
+						Value: "animal_dog",
+					},
+					{
+						Name:  "only_smol",
+						Value: "true",
+					},
+				},
+			},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		req := httptest.NewRequest(http.MethodPost, "/interactions", bytes.NewReader(b))
+		w := httptest.NewRecorder()
+
+		handler := discord.NewInteractionsHandler(&passingValidator{})
+		handler.RegisterApplicationCommandHandler("blep", func(ctx *discord.InteractionContext) (*discord.InteractionResponse, error) {
+			if ctx.Interaction.Data.Options[0].Value != "animal_dog" {
+				t.Errorf("expected option value %s, got %s", "animal_dog", ctx.Interaction.Data.Options[0].Value)
+			}
+
+			if ctx.Interaction.Data.Options[1].Value != "true" {
+				t.Errorf("expected option value %s, got %s", "true", ctx.Interaction.Data.Options[1].Value)
+			}
+
+			return &discord.InteractionResponse{
+				Type: discord.InteractionResponseTypeChannelMessageWithSource,
+				Data: discord.InteractionResponseData{
+					Content: "You requested a dog",
+				},
+			}, nil
+		})
+
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected response status code %d, got %d", http.StatusOK, w.Code)
+		}
+
+		var response discord.InteractionResponse
+		if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+			t.Fatal(err)
+		}
+
+		if response.Type != discord.InteractionResponseTypeChannelMessageWithSource {
+			t.Errorf("expected response type %d, got %d", discord.InteractionResponseTypeChannelMessageWithSource, response.Type)
+		}
+
+		if response.Data.Content != "You requested a dog" {
+			t.Errorf("expected response content %s, got %s", "You requested a dog", response.Data.Content)
 		}
 	})
 }

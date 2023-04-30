@@ -80,7 +80,12 @@ func main() {
 	}
 
 	validator := &ed25519Validator{publicKey: pb}
-	http.HandleFunc("/interactions", discord.NewInteractionsHandler(validator))
+	handler := discord.NewInteractionsHandler(validator)
+
+	// handler.RegisterApplicationCommandHandler("version", func(ctx *discord.InteractionContext) error {
+	// })
+
+	http.HandleFunc("/interactions", handler.ServeHTTP)
 
 	if buildHash == "" {
 		buildHash = "dev"

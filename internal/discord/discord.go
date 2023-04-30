@@ -29,9 +29,9 @@ const (
 
 type Interaction struct {
 	Type int `json:"type"`
-	Data struct {
-		Name string `json:"name"`
-	} `json:"data"`
+	// TODO: We can only handle ping and application commands
+	// Maybe this should be interface{}, and then we can cast based on Type
+	Data ApplicationCommandInteractionData `json:"data,omitempty"`
 }
 
 const (
@@ -54,64 +54,101 @@ type InteractionsRequestValidator interface {
 	Validate(r *http.Request) error
 }
 
-func NewInteractionsHandler(validator InteractionsRequestValidator) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			w.Header().Add("Allow", http.MethodPost)
-			return
-		}
+type InteractionsHandler struct {
+	applicationCommands map[string]ApplicationCommandHandlerFunc
+	validator           InteractionsRequestValidator
+}
 
-		err := validator.Validate(r)
-		if err != nil {
-			http.Error(w, "invalid request signature", http.StatusUnauthorized)
-			return
-		}
+func (h *InteractionsHandler) handleUnhandledInteraction(w http.ResponseWriter, interaction *Interaction) {
+	log.Printf("unhandled interaction: %+v", interaction)
+	res := InteractionResponse{
+		Type: InteractionResponseTypeChannelMessageWithSource,
+		Data: InteractionResponseData{
+			Content: "Sorry, I don't know how to handle that.",
+		},
+	}
 
-		var interaction Interaction
-		err = json.NewDecoder(r.Body).Decode(&interaction)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
+	err := json.NewEncoder(w).Encode(res)
+	if err != nil {
+		log.Printf("failed to encode interaction response: %s\n", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
 
-		log.Printf("interaction received: %+v", interaction)
-		w.WriteHeader(http.StatusOK)
+func (h *InteractionsHandler) handleApplicationCommandInteraction(w http.ResponseWriter, interaction *Interaction) {
+	handler := h.applicationCommands[interaction.Data.Name]
+	if handler == nil {
+		h.handleUnhandledInteraction(w, interaction)
+		return
+	}
 
-		if interaction.Type == InteractionTypePing {
-			fmt.Fprintf(w, "{\"type\": %d}", InteractionResponseTypePong)
-			return
-		}
+	ctx := &InteractionContext{
+		Interaction: interaction,
+	}
+	res, err := handler(ctx)
+	if err != nil {
+		log.Printf("failed to handle application command: %s\n", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-		if interaction.Type == InteractionTypeApplicationCommand {
-			if interaction.Data.Name == "version" {
-				log.Printf("handling version command")
-				err = json.NewEncoder(w).Encode(InteractionResponse{
-					Type: InteractionResponseTypeChannelMessageWithSource,
-					Data: InteractionResponseData{
-						// Content: fmt.Sprintf("roastedbot: built at %s, using commit with SHA %s", formattedBuildDate, buildHash),
-						Content: "TODO",
-					},
-				})
-				if err != nil {
-					log.Printf("failed to encode interaction response: %s\n", err)
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-				}
-				return
-			}
-		}
+	err = json.NewEncoder(w).Encode(res)
+	if err != nil {
+		log.Printf("failed to encode interaction response: %s\n", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
 
-		log.Printf("unhandled interaction: %+v", interaction)
-		err = json.NewEncoder(w).Encode(InteractionResponse{
-			Type: InteractionResponseTypeChannelMessageWithSource,
-			Data: InteractionResponseData{
-				Content: "Sorry, I don't know how to handle that command.",
-			},
-		})
-		if err != nil {
-			log.Printf("failed to encode interaction response: %s\n", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+func (h *InteractionsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Header().Add("Allow", http.MethodPost)
+		return
+	}
+
+	err := h.validator.Validate(r)
+	if err != nil {
+		http.Error(w, "invalid request signature", http.StatusUnauthorized)
+		return
+	}
+
+	var interaction Interaction
+	err = json.NewDecoder(r.Body).Decode(&interaction)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("interaction received: %+v", interaction)
+	w.WriteHeader(http.StatusOK)
+
+	if interaction.Type == InteractionTypePing {
+		fmt.Fprintf(w, "{\"type\": %d}", InteractionResponseTypePong)
+		return
+	}
+
+	if interaction.Type == InteractionTypeApplicationCommand {
+		h.handleApplicationCommandInteraction(w, &interaction)
+		return
+	}
+
+	h.handleUnhandledInteraction(w, &interaction)
+}
+
+type InteractionContext struct {
+	Interaction *Interaction
+}
+
+type ApplicationCommandHandlerFunc func(ctx *InteractionContext) (*InteractionResponse, error)
+
+func (h *InteractionsHandler) RegisterApplicationCommandHandler(name string, handler ApplicationCommandHandlerFunc) {
+	h.applicationCommands[name] = handler
+}
+
+func NewInteractionsHandler(validator InteractionsRequestValidator) *InteractionsHandler {
+	return &InteractionsHandler{
+		applicationCommands: make(map[string]ApplicationCommandHandlerFunc),
+		validator:           validator,
 	}
 }
 
@@ -160,6 +197,21 @@ type RegisterApplicationCommandOptions struct {
 	Type        *int                       `json:"type,omitempty"`
 	Description *string                    `json:"description,omitempty"`
 	Options     []ApplicationCommandOption `json:"options,omitempty"`
+}
+
+type ApplicationCommandInteractionDataOption struct {
+	Name  string      `json:"name"`
+	Type  int         `json:"type"`
+	Value interface{} `json:"value,omitempty"`
+}
+
+type ApplicationCommandInteractionData struct {
+	Id       string                                    `json:"id"`
+	Name     string                                    `json:"name"`
+	Type     int                                       `json:"type"`
+	Options  []ApplicationCommandInteractionDataOption `json:"options,omitempty"`
+	GuildId  string                                    `json:"guild_id,omitempty"`
+	TargetId string                                    `json:"target_id,omitempty"`
 }
 
 type ApplicationCommandsClient service
