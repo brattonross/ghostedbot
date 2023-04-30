@@ -34,7 +34,8 @@ func TestNewInteractionsHandler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/interactions", bytes.NewReader(b))
 		w := httptest.NewRecorder()
 
-		handler := discord.NewInteractionsHandler(&failingValidator{})
+		handler := discord.NewInteractionsHandler(nil)
+		handler.Validator = &failingValidator{}
 
 		handler.ServeHTTP(w, req)
 
@@ -52,7 +53,8 @@ func TestNewInteractionsHandler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/interactions", bytes.NewReader(b))
 		w := httptest.NewRecorder()
 
-		handler := discord.NewInteractionsHandler(&passingValidator{})
+		handler := discord.NewInteractionsHandler(nil)
+		handler.Validator = &passingValidator{}
 
 		handler.ServeHTTP(w, req)
 
@@ -74,7 +76,8 @@ func TestNewInteractionsHandler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/interactions", bytes.NewReader(b))
 		w := httptest.NewRecorder()
 
-		handler := discord.NewInteractionsHandler(&passingValidator{})
+		handler := discord.NewInteractionsHandler(nil)
+		handler.Validator = &passingValidator{}
 
 		handler.ServeHTTP(w, req)
 
@@ -101,7 +104,8 @@ func TestNewInteractionsHandler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/interactions", bytes.NewReader(b))
 		w := httptest.NewRecorder()
 
-		handler := discord.NewInteractionsHandler(&passingValidator{})
+		handler := discord.NewInteractionsHandler(nil)
+		handler.Validator = &passingValidator{}
 
 		handler.ServeHTTP(w, req)
 
@@ -135,7 +139,9 @@ func TestNewInteractionsHandler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/interactions", bytes.NewReader(b))
 		w := httptest.NewRecorder()
 
-		handler := discord.NewInteractionsHandler(&passingValidator{})
+		handler := discord.NewInteractionsHandler(nil)
+		handler.Validator = &passingValidator{}
+
 		handler.RegisterApplicationCommandHandler("blep", func(ctx *discord.InteractionContext) (*discord.InteractionResponse, error) {
 			if ctx.Interaction.Data.Options[0].Value != "animal_dog" {
 				t.Errorf("expected option value %s, got %s", "animal_dog", ctx.Interaction.Data.Options[0].Value)

@@ -1,11 +1,8 @@
 package main
 
 import (
-	"bytes"
-	"crypto/ed25519"
 	"encoding/hex"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -23,41 +20,7 @@ var (
 	formattedBuildDate string
 )
 
-type ed25519Validator struct {
-	publicKey ed25519.PublicKey
-}
-
-func (v *ed25519Validator) Validate(r *http.Request) error {
-	signature := r.Header.Get("X-Signature-Ed25519")
-	sig, err := hex.DecodeString(signature)
-	if err != nil {
-		return err
-	}
-
-	timestamp := r.Header.Get("X-Signature-Timestamp")
-	message := bytes.NewBufferString(timestamp)
-
-	var body bytes.Buffer
-	// copy the body into both the message and body buffers,
-	// the latter of which will be used to re-populate the request body.
-	_, err = io.Copy(message, io.TeeReader(r.Body, &body))
-	if err != nil {
-		return err
-	}
-
-	defer r.Body.Close()
-	defer func() {
-		r.Body = io.NopCloser(&body)
-	}()
-
-	if ok := ed25519.Verify(v.publicKey, message.Bytes(), sig); !ok {
-		return fmt.Errorf("invalid request signature")
-	}
-
-	return nil
-}
-
-var discordClient *discord.Client
+var client *discord.Client
 
 func main() {
 	port := os.Getenv("PORT")
@@ -70,10 +33,7 @@ func main() {
 		log.Fatalf("failed to decode public key: %s\n", err)
 	}
 
-	discordClient = discord.NewClient(botToken)
-
-	validator := &ed25519Validator{publicKey: pb}
-	handler := discord.NewInteractionsHandler(validator)
+	handler := discord.NewInteractionsHandler(pb)
 
 	// test command
 	handler.RegisterApplicationCommandHandler("test", func(ctx *discord.InteractionContext) (*discord.InteractionResponse, error) {
@@ -85,8 +45,10 @@ func main() {
 		}, nil
 	})
 
+	client = discord.NewClient(botToken)
+
 	// version command
-	_, err = discordClient.ApplicationCommands.Register(applicationId, &discord.RegisterApplicationCommandOptions{
+	_, err = client.ApplicationCommands.Register(applicationId, &discord.RegisterApplicationCommandOptions{
 		Name:        "version",
 		Description: discord.String("Print version information."),
 	})
@@ -98,7 +60,7 @@ func main() {
 		return &discord.InteractionResponse{
 			Type: discord.InteractionResponseTypeChannelMessageWithSource,
 			Data: &discord.InteractionResponseData{
-				Content: discord.String(fmt.Sprintf("Built at %s using commit %s", formattedBuildDate, buildHash)),
+				Content: discord.String(fmt.Sprintf("Built %s using commit %s", formattedBuildDate, buildHash)),
 			},
 		}, nil
 	})
@@ -134,9 +96,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to parse build date: %s\n", err)
 	}
-	formattedBuildDate = time.Unix(epoch, 0).Format(time.RFC3339)
+	formattedBuildDate = time.Unix(epoch, 0).Format(time.DateTime)
 
-	log.Printf("starting roastedbot: built at %s using commit with SHA %s\n", formattedBuildDate, buildHash)
+	log.Printf("starting roastedbot: built %s using commit with SHA %s\n", formattedBuildDate, buildHash)
 
 	if port == "" {
 		port = "8080"

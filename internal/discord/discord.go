@@ -2,6 +2,8 @@ package discord
 
 import (
 	"bytes"
+	"crypto/ed25519"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -62,7 +64,8 @@ type InteractionsRequestValidator interface {
 
 type InteractionsHandler struct {
 	applicationCommands map[string]ApplicationCommandHandlerFunc
-	validator           InteractionsRequestValidator
+
+	Validator InteractionsRequestValidator
 }
 
 func (h *InteractionsHandler) handleUnhandledInteraction(w http.ResponseWriter, interaction *Interaction) {
@@ -123,7 +126,7 @@ func (h *InteractionsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	err := h.validator.Validate(r)
+	err := h.Validator.Validate(r)
 	if err != nil {
 		http.Error(w, "invalid request signature", http.StatusUnauthorized)
 		return
@@ -160,10 +163,48 @@ func (h *InteractionsHandler) RegisterApplicationCommandHandler(name string, han
 	h.applicationCommands[name] = handler
 }
 
-func NewInteractionsHandler(validator InteractionsRequestValidator) *InteractionsHandler {
+type ed25519Validator struct {
+	publicKey ed25519.PublicKey
+}
+
+func (v *ed25519Validator) Validate(r *http.Request) error {
+	signature := r.Header.Get("X-Signature-Ed25519")
+	sig, err := hex.DecodeString(signature)
+	if err != nil {
+		return err
+	}
+
+	timestamp := r.Header.Get("X-Signature-Timestamp")
+	message := bytes.NewBufferString(timestamp)
+
+	var body bytes.Buffer
+	// copy the body into both the message and body buffers,
+	// the latter of which will be used to re-populate the request body.
+	_, err = io.Copy(message, io.TeeReader(r.Body, &body))
+	if err != nil {
+		return err
+	}
+
+	defer r.Body.Close()
+	defer func() {
+		r.Body = io.NopCloser(&body)
+	}()
+
+	if ok := ed25519.Verify(v.publicKey, message.Bytes(), sig); !ok {
+		return fmt.Errorf("invalid request signature")
+	}
+
+	return nil
+}
+
+// NewInteractionsHandler creates an http.Handler that handles Discord interactions.
+// The provided public key is used to validate incoming requests.
+func NewInteractionsHandler(publicKey []byte) *InteractionsHandler {
 	return &InteractionsHandler{
 		applicationCommands: make(map[string]ApplicationCommandHandlerFunc),
-		validator:           validator,
+		Validator: &ed25519Validator{
+			publicKey: publicKey,
+		},
 	}
 }
 
