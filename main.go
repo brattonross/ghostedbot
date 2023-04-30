@@ -71,17 +71,10 @@ func main() {
 
 	discordClient = discord.NewClient(botToken)
 
-	_, err = discordClient.ApplicationCommands.Register(applicationId, &discord.RegisterApplicationCommandOptions{
-		Name:        "version",
-		Description: discord.String("Print version information."),
-	})
-	if err != nil {
-		log.Fatalf("failed to register application command: %s\n", err)
-	}
-
 	validator := &ed25519Validator{publicKey: pb}
 	handler := discord.NewInteractionsHandler(validator)
 
+	// test command
 	handler.RegisterApplicationCommandHandler("test", func(ctx *discord.InteractionContext) (*discord.InteractionResponse, error) {
 		return &discord.InteractionResponse{
 			Type: discord.InteractionResponseTypeChannelMessageWithSource,
@@ -90,6 +83,15 @@ func main() {
 			},
 		}, nil
 	})
+
+	// version command
+	_, err = discordClient.ApplicationCommands.Register(applicationId, &discord.RegisterApplicationCommandOptions{
+		Name:        "version",
+		Description: discord.String("Print version information."),
+	})
+	if err != nil {
+		log.Fatalf("failed to register application command: %s\n", err)
+	}
 
 	handler.RegisterApplicationCommandHandler("version", func(ctx *discord.InteractionContext) (*discord.InteractionResponse, error) {
 		return &discord.InteractionResponse{

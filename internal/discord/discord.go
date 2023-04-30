@@ -64,6 +64,21 @@ func (h *InteractionsHandler) handleUnhandledInteraction(w http.ResponseWriter, 
 	w.WriteHeader(http.StatusBadRequest)
 }
 
+func (h *InteractionsHandler) handlePingInteraction(w http.ResponseWriter, interaction *Interaction) {
+	log.Printf("handling ping interaction: %+v", interaction)
+	w.WriteHeader(http.StatusOK)
+	w.Header().Add("Content-Type", "application/json")
+	bs, err := json.Marshal(&InteractionResponse{
+		Type: InteractionResponseTypePong,
+	})
+	if err != nil {
+		log.Printf("failed to marshal response: %s\n", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	log.Printf("responding to ping interaction with response: %s\n", bs)
+	w.Write(bs)
+}
+
 func (h *InteractionsHandler) handleApplicationCommandInteraction(w http.ResponseWriter, interaction *Interaction) {
 	handler := h.applicationCommands[interaction.Data.Name]
 	if handler == nil {
@@ -120,8 +135,7 @@ func (h *InteractionsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	log.Printf("interaction received: %+v", interaction)
 
 	if interaction.Type == InteractionTypePing {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "{\"type\": %d}", InteractionResponseTypePong)
+		h.handlePingInteraction(w, &interaction)
 		return
 	}
 
