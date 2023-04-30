@@ -68,15 +68,16 @@ func (h *InteractionsHandler) handlePingInteraction(w http.ResponseWriter, inter
 	log.Printf("handling ping interaction: %+v", interaction)
 	w.WriteHeader(http.StatusOK)
 	w.Header().Add("Content-Type", "application/json")
-	bs, err := json.Marshal(&InteractionResponse{
+
+	enc := json.NewEncoder(w)
+	enc.SetEscapeHTML(false)
+	err := enc.Encode(&InteractionResponse{
 		Type: InteractionResponseTypePong,
 	})
 	if err != nil {
-		log.Printf("failed to marshal response: %s\n", err)
+		log.Printf("failed to encode response: %s\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	log.Printf("responding to ping interaction with response: %s\n", bs)
-	w.Write(bs)
 }
 
 func (h *InteractionsHandler) handleApplicationCommandInteraction(w http.ResponseWriter, interaction *Interaction) {
@@ -99,18 +100,12 @@ func (h *InteractionsHandler) handleApplicationCommandInteraction(w http.Respons
 
 	w.WriteHeader(http.StatusOK)
 	w.Header().Add("Content-Type", "application/json")
-	bs, err := json.Marshal(res)
-	if err != nil {
-		log.Printf("failed to marshal response: %s\n", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
 
-	w.Header().Add("Content-Length", fmt.Sprintf("%d", len(bs)))
-
-	log.Printf("responding to interaction %s with response: %s", interaction.Data.Id, string(bs))
-	_, err = w.Write(bs)
+	enc := json.NewEncoder(w)
+	enc.SetEscapeHTML(false)
+	err = enc.Encode(res)
 	if err != nil {
-		log.Printf("failed to write response: %s\n", err)
+		log.Printf("failed to encode response: %s\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -239,7 +234,9 @@ func (c *ApplicationCommandsClient) Register(applicationId string, options *Regi
 
 	buf := &bytes.Buffer{}
 	if options != nil {
-		err = json.NewEncoder(buf).Encode(options)
+		enc := json.NewEncoder(buf)
+		enc.SetEscapeHTML(false)
+		err = enc.Encode(options)
 		if err != nil {
 			return nil, err
 		}
