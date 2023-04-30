@@ -83,6 +83,7 @@ func (h *InteractionsHandler) handleApplicationCommandInteraction(w http.Respons
 	}
 
 	w.WriteHeader(http.StatusOK)
+	w.Header().Add("Content-Type", "application/json")
 	bs, err := json.Marshal(res)
 	if err != nil {
 		log.Printf("failed to marshal response: %s\n", err)

@@ -159,6 +159,10 @@ func TestNewInteractionsHandler(t *testing.T) {
 			t.Errorf("expected response status code %d, got %d", http.StatusOK, w.Code)
 		}
 
+		if w.Header().Get("Content-Type") != "application/json" {
+			t.Errorf("expected response content type %s, got %s", "application/json", w.Header().Get("Content-Type"))
+		}
+
 		var response discord.InteractionResponse
 		if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 			t.Fatal(err)
