@@ -64,6 +64,33 @@ func TestNewInteractionsHandler(t *testing.T) {
 			t.Errorf("expected Allow header to be %s, got %s", http.MethodPost, w.Header().Get("Allow"))
 		}
 	})
+
+	t.Run("Correctly handles PING interaction", func(t *testing.T) {
+		b, err := json.Marshal(&discord.Interaction{Type: 1})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		req := httptest.NewRequest(http.MethodPost, "/interactions", bytes.NewReader(b))
+		w := httptest.NewRecorder()
+
+		handler := discord.NewInteractionsHandler(&passingValidator{})
+
+		handler(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected response status code %d, got %d", http.StatusOK, w.Code)
+		}
+
+		var response discord.InteractionResponse
+		if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+			t.Fatal(err)
+		}
+
+		if response.Type != 1 {
+			t.Errorf("expected response type %d, got %d", 1, response.Type)
+		}
+	})
 }
 
 func TestClientRegisterGlobalApplicationCommand(t *testing.T) {
