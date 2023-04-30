@@ -92,7 +92,25 @@ func TestNewInteractionsHandler(t *testing.T) {
 		}
 	})
 
-	t.Run("Correctly handles application command interaction", func(t *testing.T) {
+	t.Run("Correctly handles invalid interaction", func(t *testing.T) {
+		b, err := json.Marshal(&discord.Interaction{Type: 999})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		req := httptest.NewRequest(http.MethodPost, "/interactions", bytes.NewReader(b))
+		w := httptest.NewRecorder()
+
+		handler := discord.NewInteractionsHandler(&passingValidator{})
+
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("expected response status code %d, got %d", http.StatusBadRequest, w.Code)
+		}
+	})
+
+	t.Run("Correctly handles valid application command interaction", func(t *testing.T) {
 		b, err := json.Marshal(&discord.Interaction{
 			Type: discord.InteractionTypeApplicationCommand,
 			Data: discord.ApplicationCommandInteractionData{

@@ -61,18 +61,7 @@ type InteractionsHandler struct {
 
 func (h *InteractionsHandler) handleUnhandledInteraction(w http.ResponseWriter, interaction *Interaction) {
 	log.Printf("unhandled interaction: %+v", interaction)
-	res := InteractionResponse{
-		Type: InteractionResponseTypeChannelMessageWithSource,
-		Data: &InteractionResponseData{
-			Content: "Sorry, I don't know how to handle that.",
-		},
-	}
-
-	err := json.NewEncoder(w).Encode(res)
-	if err != nil {
-		log.Printf("failed to encode interaction response: %s\n", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	w.WriteHeader(http.StatusBadRequest)
 }
 
 func (h *InteractionsHandler) handleApplicationCommandInteraction(w http.ResponseWriter, interaction *Interaction) {
@@ -82,6 +71,7 @@ func (h *InteractionsHandler) handleApplicationCommandInteraction(w http.Respons
 		return
 	}
 
+	log.Printf("handling application command: %+v", interaction)
 	ctx := &InteractionContext{
 		Interaction: interaction,
 	}
@@ -92,6 +82,7 @@ func (h *InteractionsHandler) handleApplicationCommandInteraction(w http.Respons
 		return
 	}
 
+	w.WriteHeader(http.StatusOK)
 	err = json.NewEncoder(w).Encode(res)
 	if err != nil {
 		log.Printf("failed to encode interaction response: %s\n", err)
@@ -120,9 +111,9 @@ func (h *InteractionsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 
 	log.Printf("interaction received: %+v", interaction)
-	w.WriteHeader(http.StatusOK)
 
 	if interaction.Type == InteractionTypePing {
+		w.WriteHeader(http.StatusOK)
 		fmt.Fprintf(w, "{\"type\": %d}", InteractionResponseTypePong)
 		return
 	}
