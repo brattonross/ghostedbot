@@ -297,7 +297,7 @@ func NewClient(botToken string) *Client {
 	baseURL, _ := url.Parse(defaultBaseURL)
 
 	c := &Client{
-		client:   http.DefaultClient,
+		client:   &http.Client{},
 		BaseURL:  baseURL,
 		botToken: botToken,
 	}
