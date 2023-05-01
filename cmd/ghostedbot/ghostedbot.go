@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -22,6 +23,53 @@ func main() {
 	}
 
 	handler := discord.NewInteractionsHandler(pb)
+
+	handler.RegisterApplicationCommandHandler("mdn", func(ctx *discord.InteractionContext) (*discord.InteractionResponse, error) {
+		log.Printf("received command: %+v\n", ctx.Interaction)
+
+		if len(ctx.Interaction.Data.Options) < 1 {
+			return &discord.InteractionResponse{
+				Type: discord.InteractionResponseTypeChannelMessageWithSource,
+				Data: &discord.InteractionResponseData{
+					Content: discord.String("Please provide a search query"),
+				},
+			}, nil
+		}
+
+		query := ctx.Interaction.Data.Options[0].Value.(string)
+		res, err := http.Get(fmt.Sprintf("https://developer.mozilla.org/api/v1/search?q=%s&locale=en-US", query))
+		if err != nil {
+			return nil, fmt.Errorf("failed to search MDN: %w", err)
+		}
+
+		var searchResults struct {
+			Documents []struct {
+				Title string `json:"title"`
+				Slug  string `json:"slug"`
+			}
+		}
+
+		err = json.NewDecoder(res.Body).Decode(&searchResults)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal MDN search results: %w", err)
+		}
+
+		if len(searchResults.Documents) < 1 {
+			return &discord.InteractionResponse{
+				Type: discord.InteractionResponseTypeChannelMessageWithSource,
+				Data: &discord.InteractionResponseData{
+					Content: discord.String("No articles found"),
+				},
+			}, nil
+		}
+
+		return &discord.InteractionResponse{
+			Type: discord.InteractionResponseTypeChannelMessageWithSource,
+			Data: &discord.InteractionResponseData{
+				Content: discord.String(searchResults.Documents[0].Title + ": https://developer.mozilla.org/en-US/docs/" + searchResults.Documents[0].Slug),
+			},
+		}, nil
+	})
 
 	handler.RegisterApplicationCommandHandler("test", func(ctx *discord.InteractionContext) (*discord.InteractionResponse, error) {
 		return &discord.InteractionResponse{

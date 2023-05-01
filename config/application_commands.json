@@ -1,6 +1,18 @@
 {
     "global": [
         {
+            "name": "mdn",
+            "description": "Searches MDN for the given query, returning the link for the first matched article.",
+            "options": [
+                {
+                    "name": "query",
+                    "description": "The query to search for.",
+                    "type": 3,
+                    "required": true
+                }
+            ]
+        },
+        {
             "name": "test",
             "description": "Test command."
         },
