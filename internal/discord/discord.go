@@ -56,6 +56,16 @@ type InteractionResponse struct {
 	Data *InteractionResponseData `json:"data,omitempty"`
 }
 
+// MessageResponse is a convenience function for creating a response that sends a basic text message.
+func MessageResponse(message string) *InteractionResponse {
+	return &InteractionResponse{
+		Type: InteractionResponseTypeChannelMessageWithSource,
+		Data: &InteractionResponseData{
+			Content: String(message),
+		},
+	}
+}
+
 // InteractionsRequestValidator validates incoming requests to the interactions endpoint.
 type InteractionsRequestValidator interface {
 	// Validate returns an error if the request is not a valid interactions request.
