@@ -320,6 +320,52 @@ func (c *ApplicationCommandsClient) Register(applicationId string, options *Regi
 	return &command, nil
 }
 
+func (c *ApplicationCommandsClient) BulkOverwrite(applicationId string, commands []*RegisterApplicationCommandOptions) ([]*ApplicationCommand, error) {
+	u, err := c.client.BaseURL.Parse(fmt.Sprintf("applications/%s/commands", applicationId))
+	if err != nil {
+		return nil, err
+	}
+
+	buf := &bytes.Buffer{}
+	enc := json.NewEncoder(buf)
+	enc.SetEscapeHTML(false)
+	err = enc.Encode(commands)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, u.String(), buf)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bot %s", c.client.botToken))
+
+	res, err := c.client.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	// Check for 4xx or 5xx status codes
+	if res.StatusCode >= http.StatusBadRequest {
+		return nil, fmt.Errorf("unexpected status code %d", res.StatusCode)
+	}
+
+	var commandsResponse []*ApplicationCommand
+	err = json.NewDecoder(res.Body).Decode(&commandsResponse)
+	if err == io.EOF {
+		// ignore EOF errors caused by empty response body
+		err = nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return commandsResponse, nil
+}
+
 const defaultBaseURL = "https://discord.com/api/v10/"
 
 type service struct {

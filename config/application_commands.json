@@ -1,0 +1,12 @@
+{
+    "global": [
+        {
+            "name": "test",
+            "description": "Test command."
+        },
+        {
+            "name": "version",
+            "description": "Print version information."
+        }
+    ]
+}

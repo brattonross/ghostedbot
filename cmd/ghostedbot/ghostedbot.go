@@ -7,25 +7,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"strconv"
-	"time"
 
+	"github.com/brattonross/ghostedbot/internal/debug"
 	"github.com/brattonross/ghostedbot/internal/discord"
 )
 
-// variables that get substituted by the deployment script (-ldflags).
-var (
-	buildHash          string
-	buildDate          string
-	formattedBuildDate string
-)
-
-var client *discord.Client
-
 func main() {
 	port := os.Getenv("PORT")
-	applicationId := os.Getenv("DISCORD_APPLICATION_ID")
-	botToken := os.Getenv("DISCORD_BOT_TOKEN")
 	publicKey := os.Getenv("DISCORD_PUBLIC_KEY")
 
 	pb, err := hex.DecodeString(publicKey)
@@ -35,7 +23,6 @@ func main() {
 
 	handler := discord.NewInteractionsHandler(pb)
 
-	// test command
 	handler.RegisterApplicationCommandHandler("test", func(ctx *discord.InteractionContext) (*discord.InteractionResponse, error) {
 		return &discord.InteractionResponse{
 			Type: discord.InteractionResponseTypeChannelMessageWithSource,
@@ -45,22 +32,11 @@ func main() {
 		}, nil
 	})
 
-	client = discord.NewClient(botToken)
-
-	// version command
-	_, err = client.ApplicationCommands.Register(applicationId, &discord.RegisterApplicationCommandOptions{
-		Name:        "version",
-		Description: discord.String("Print version information."),
-	})
-	if err != nil {
-		log.Fatalf("failed to register application command: %s\n", err)
-	}
-
 	handler.RegisterApplicationCommandHandler("version", func(ctx *discord.InteractionContext) (*discord.InteractionResponse, error) {
 		return &discord.InteractionResponse{
 			Type: discord.InteractionResponseTypeChannelMessageWithSource,
 			Data: &discord.InteractionResponseData{
-				Content: discord.String(fmt.Sprintf("Built %s using commit %s", formattedBuildDate, buildHash)),
+				Content: discord.String(fmt.Sprintf("Built %s using commit %s", debug.FormattedBuildDate(), debug.BuildHash)),
 			},
 		}, nil
 	})
@@ -84,21 +60,7 @@ func main() {
 		}
 	})
 
-	if buildHash == "" {
-		buildHash = "dev"
-	}
-
-	if buildDate == "" {
-		buildDate = fmt.Sprintf("%d", time.Now().Unix())
-	}
-
-	epoch, err := strconv.ParseInt(buildDate, 10, 64)
-	if err != nil {
-		log.Fatalf("failed to parse build date: %s\n", err)
-	}
-	formattedBuildDate = time.Unix(epoch, 0).Format(time.DateTime)
-
-	log.Printf("starting roastedbot: built %s using commit with SHA %s\n", formattedBuildDate, buildHash)
+	log.Printf("starting roastedbot: built %s using commit with SHA %s\n", debug.FormattedBuildDate(), debug.BuildHash)
 
 	if port == "" {
 		port = "8080"

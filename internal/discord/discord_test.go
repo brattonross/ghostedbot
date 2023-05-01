@@ -243,3 +243,69 @@ func TestClientRegisterGlobalApplicationCommand(t *testing.T) {
 		t.Errorf("expected command ID %s, got %s", "1234567890", command.Id)
 	}
 }
+
+func TestBulkOverwriteGlobalApplicationCommands(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut {
+			t.Errorf("expected request method %s, got %s", http.MethodPut, r.Method)
+		}
+
+		if r.URL.Path != "/applications/1234567890/commands" {
+			t.Errorf("expected request path %s, got %s", "/applications/1234567890/commands", r.URL.Path)
+		}
+
+		w.Write([]byte(`[{"id": "1234567890", "application_id": "1234567890", "name": "blep", "description": "Send a random adorable animal photo", "version": "1234567890", "default_permission": true}]`))
+	}))
+	defer server.Close()
+
+	client := discord.NewClient("1234567890")
+	serverURL, _ := url.Parse(server.URL)
+	client.BaseURL = serverURL
+
+	commands, err := client.ApplicationCommands.BulkOverwrite("1234567890", []*discord.RegisterApplicationCommandOptions{
+		{
+			Name:        "blep",
+			Type:        discord.Int(discord.ApplicationCommandTypeChatInput),
+			Description: discord.String("Send a random adorable animal photo"),
+			Options: []discord.ApplicationCommandOption{
+				{
+					Name:        "animal",
+					Description: "The type of animal",
+					Type:        discord.ApplicationCommandOptionTypeString,
+					Required:    discord.Bool(true),
+					Choices: []discord.ApplicationCommandOptionChoice{
+						{
+							Name:  "Dog",
+							Value: "animal_dog",
+						},
+						{
+							Name:  "Cat",
+							Value: "animal_cat",
+						},
+						{
+							Name:  "Penguin",
+							Value: "animal_penguin",
+						},
+					},
+				},
+				{
+					Name:        "only_smol",
+					Description: "Whether to show only baby animals",
+					Type:        discord.ApplicationCommandOptionTypeBoolean,
+					Required:    discord.Bool(false),
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
+
+	if len(commands) != 1 {
+		t.Errorf("expected 1 command, got %d", len(commands))
+	}
+
+	if commands[0].Id != "1234567890" {
+		t.Errorf("expected command ID %s, got %s", "1234567890", commands[0].Id)
+	}
+}
