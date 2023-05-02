@@ -119,7 +119,7 @@ func (h *InteractionsHandler) handleApplicationCommandInteraction(w http.Respons
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Header().Add("Content-Type", "application/json")
+	w.Header().Add("Content-Type", "application/json; charset=utf-8")
 
 	enc := json.NewEncoder(w)
 	enc.SetEscapeHTML(false)

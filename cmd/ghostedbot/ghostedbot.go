@@ -12,6 +12,7 @@ import (
 	"github.com/brattonross/ghostedbot/internal/debug"
 	"github.com/brattonross/ghostedbot/internal/discord"
 	"github.com/brattonross/ghostedbot/internal/mdn"
+	"github.com/brattonross/ghostedbot/internal/year/progress"
 )
 
 func main() {
@@ -35,6 +36,8 @@ func main() {
 	handler.RegisterApplicationCommandHandler("version", func(ctx *discord.InteractionContext) (*discord.InteractionResponse, error) {
 		return discord.MessageResponse(fmt.Sprintf("Built %s using commit %s", debug.FormattedBuildDate(), debug.BuildHash)), nil
 	})
+
+	handler.RegisterApplicationCommandHandler("year-progress", progress.PercentageHandler)
 
 	http.HandleFunc("/interactions", func(w http.ResponseWriter, r *http.Request) {
 		// TODO: Why do the interaction responses only become valid after

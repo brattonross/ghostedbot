@@ -23,6 +23,10 @@
         {
             "name": "version",
             "description": "Print version information."
+        },
+        {
+            "name": "year-progress",
+            "description": "Prints a progress bar that shows how far through the year we are."
         }
     ]
 }
