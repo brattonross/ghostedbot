@@ -17,6 +17,18 @@
             ]
         },
         {
+            "name": "shuffle",
+            "description": "Shuffles the provided message, word by word.",
+            "options": [
+                {
+                    "name": "message",
+                    "description": "The message to shuffle.",
+                    "type": 3,
+                    "required": true
+                }
+            ]
+        },
+        {
             "name": "test",
             "description": "Test command."
         },

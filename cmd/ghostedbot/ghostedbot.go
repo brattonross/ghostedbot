@@ -12,6 +12,7 @@ import (
 	"github.com/brattonross/ghostedbot/internal/debug"
 	"github.com/brattonross/ghostedbot/internal/discord"
 	"github.com/brattonross/ghostedbot/internal/mdn"
+	"github.com/brattonross/ghostedbot/internal/words"
 	"github.com/brattonross/ghostedbot/internal/year/progress"
 )
 
@@ -28,6 +29,8 @@ func main() {
 
 	handler.RegisterApplicationCommandHandler("checkem", checkem.Handler)
 	handler.RegisterApplicationCommandHandler("mdn", mdn.SearchHandler)
+
+	handler.RegisterApplicationCommandHandler("shuffle", words.ShuffleHandler)
 
 	handler.RegisterApplicationCommandHandler("test", func(ctx *discord.InteractionContext) (*discord.InteractionResponse, error) {
 		return discord.MessageResponse("test successful <:AlienUnpleased:940285855292080149>"), nil
