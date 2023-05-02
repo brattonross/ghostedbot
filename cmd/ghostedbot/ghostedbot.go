@@ -8,22 +8,11 @@ import (
 	"net/http/httptest"
 	"os"
 
+	"github.com/brattonross/ghostedbot/internal/checkem"
 	"github.com/brattonross/ghostedbot/internal/debug"
 	"github.com/brattonross/ghostedbot/internal/discord"
 	"github.com/brattonross/ghostedbot/internal/mdn"
 )
-
-var checkemNames = map[int8]string{
-	2:  "dubs",
-	3:  "trips",
-	4:  "quads",
-	5:  "quints",
-	6:  "sexts",
-	7:  "septs",
-	8:  "octs",
-	9:  "nines",
-	10: "decs",
-}
 
 func main() {
 	port := os.Getenv("PORT")
@@ -36,31 +25,7 @@ func main() {
 
 	handler := discord.NewInteractionsHandler(pb)
 
-	handler.RegisterApplicationCommandHandler("checkem", func(ctx *discord.InteractionContext) (*discord.InteractionResponse, error) {
-		id := ctx.Interaction.Id
-		char := id[len(id)-1]
-		var repeated int8
-		for i := len(id) - 1; i >= 0; i-- {
-			if id[i] != char {
-				break
-			}
-			repeated++
-		}
-
-		if repeated < 2 {
-			return discord.MessageResponse(id), nil
-		}
-
-		if repeated > 10 {
-			message := fmt.Sprintf("%s - <:Paggi:1103063622474792980> <a:Clap:1103063782760124540> you got more than 10 repeating digits?!", id)
-			return discord.MessageResponse(message), nil
-		}
-
-		name := checkemNames[repeated]
-		message := fmt.Sprintf("%s - <:EZ:1103063620209885214> <a:Clap:1103063782760124540> gratz on the %s", id, name)
-		return discord.MessageResponse(message), nil
-	})
-
+	handler.RegisterApplicationCommandHandler("checkem", checkem.Handler)
 	handler.RegisterApplicationCommandHandler("mdn", mdn.SearchHandler)
 
 	handler.RegisterApplicationCommandHandler("test", func(ctx *discord.InteractionContext) (*discord.InteractionResponse, error) {
