@@ -30,7 +30,8 @@ const (
 )
 
 type Interaction struct {
-	Type int `json:"type"`
+	Id   string `json:"id"`
+	Type int    `json:"type"`
 	// TODO: We can only handle ping and application commands
 	// Maybe this should be interface{}, and then we can cast based on Type
 	Data ApplicationCommandInteractionData `json:"data,omitempty"`
@@ -228,7 +229,9 @@ type ApplicationCommand struct {
 	Id            string  `json:"id"`
 	Type          int     `json:"type"`
 	ApplicationId string  `json:"application_id"`
-	GuidId        *string `json:"guid_id,omitempty"`
+	GuildId       *string `json:"guild_id,omitempty"`
+	Name          string  `json:"name"`
+	Description   string  `json:"description"`
 }
 
 type ApplicationCommandOptionChoice struct {

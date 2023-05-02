@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/brattonross/ghostedbot/internal/discord"
-	"github.com/davecgh/go-spew/spew"
 )
 
 type commands struct {
@@ -51,5 +50,10 @@ func main() {
 		log.Fatalf("failed to bulk overwrite application commands: %s\n", err)
 	}
 
-	spew.Printf("registered commands: %+v\n", registeredCommands)
+	commandNames := make([]string, len(registeredCommands))
+	for i, command := range registeredCommands {
+		commandNames[i] = command.Name
+	}
+
+	log.Printf("registered application commands: %v\n", commandNames)
 }

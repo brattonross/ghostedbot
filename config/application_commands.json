@@ -1,6 +1,10 @@
 {
     "global": [
         {
+            "name": "checkem",
+            "description": "Posts the ID of your message and checks for dubs or better."
+        },
+        {
             "name": "mdn",
             "description": "Searches MDN for the given query, returning the link for the first matched article.",
             "options": [
