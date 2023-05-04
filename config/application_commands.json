@@ -5,6 +5,30 @@
             "description": "Posts the ID of your message and checks for dubs or better."
         },
         {
+            "name": "left-pad",
+            "description": "Left-pads a message",
+            "options": [
+                {
+                    "name": "message",
+                    "description": "The message to pad.",
+                    "type": 3,
+                    "required": true
+                },
+                {
+                    "name": "length",
+                    "description": "The length to pad to.",
+                    "type": 4,
+                    "required": true
+                },
+                {
+                    "name": "character",
+                    "description": "The character to pad with.",
+                    "type": 3,
+                    "required": true
+                }
+            ]
+        },
+        {
             "name": "mdn",
             "description": "Searches MDN for the given query, returning the link for the first matched article.",
             "options": [

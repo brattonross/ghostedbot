@@ -28,6 +28,7 @@ func main() {
 	handler := discord.NewInteractionsHandler(pb)
 
 	handler.RegisterApplicationCommandHandler("checkem", checkem.Handler)
+	handler.RegisterApplicationCommandHandler("left-pad", words.LeftPadHandler)
 	handler.RegisterApplicationCommandHandler("mdn", mdn.SearchHandler)
 
 	handler.RegisterApplicationCommandHandler("shuffle", words.ShuffleHandler)

@@ -165,8 +165,8 @@ func TestNewInteractionsHandler(t *testing.T) {
 			t.Errorf("expected response status code %d, got %d", http.StatusOK, w.Code)
 		}
 
-		if w.Header().Get("Content-Type") != "application/json" {
-			t.Errorf("expected response content type %s, got %s", "application/json", w.Header().Get("Content-Type"))
+		if w.Header().Get("Content-Type") != "application/json; charset=utf-8" {
+			t.Errorf("expected response content type %s, got %s", "application/json; charset=utf-8", w.Header().Get("Content-Type"))
 		}
 
 		var response discord.InteractionResponse
