@@ -1,6 +1,7 @@
 package words
 
 import (
+	"math"
 	"math/rand"
 	"strings"
 
@@ -8,25 +9,15 @@ import (
 )
 
 func LeftPad(s string, length int, char string) string {
+	if len(char) == 0 {
+		char = " "
+	}
 	length = length - len(s)
 	if length <= 0 {
 		return s
 	}
-	if len(char) == 0 {
-		char = " "
-	}
-	pad := ""
-	for true {
-		if length&1 == 1 {
-			pad += char
-		}
-		length >>= 1
-		if length == 0 {
-			break
-		}
-		char += char
-	}
-	return pad + s
+	char = strings.Repeat(char, int(math.Ceil(float64(length)/float64(len(char)))))
+	return char[:length] + s
 }
 
 func LeftPadHandler(ctx *discord.InteractionContext) (*discord.InteractionResponse, error) {

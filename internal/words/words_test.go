@@ -35,6 +35,20 @@ func TestLeftPad(t *testing.T) {
 			char:   "x",
 			want:   "xxxxxxtest",
 		},
+		{
+			name:   "length less than char",
+			str:    "t",
+			length: 2,
+			char:   "xxxx",
+			want:   "xt",
+		},
+		{
+			name:   "long char",
+			str:    "t",
+			length: 7,
+			char:   "ccccc",
+			want:   "cccccct",
+		},
 	}
 
 	for _, tc := range tt {
